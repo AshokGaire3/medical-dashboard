@@ -42,7 +42,9 @@ const Patients: React.FC = () => {
     });
   };
 
-  const filteredPatients = useMemo(() => getFilteredPatients(), [searchTerm, statusFilter, conditionFilter, patientTypeFilter]);
+  const filteredPatients = useMemo(() => {
+    return getFilteredPatients();
+  }, [searchTerm, patientTypeFilter, getFilteredPatients]);
 
   const uniqueConditions = Array.from(new Set(mockPatients.map(p => p.condition)));
   const uniqueStatuses = Array.from(new Set(mockPatients.map(p => p.status)));
