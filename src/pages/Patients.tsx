@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Filter, Plus, Users, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 import PatientTable from '../components/Patients/PatientTable';
 import PatientProfile from '../components/Patients/PatientProfile';
-import { patientsApi, dashboardApi } from '../api';
+import { patientsApi, dashboardApi, apiConfig } from '../api';
 import { Patient, DashboardMetrics } from '../types';
 
 const Patients: React.FC = () => {
@@ -29,7 +29,8 @@ const Patients: React.FC = () => {
         setMetrics(metricsData);
       } catch (err) {
         console.error('Error fetching patients data:', err);
-        setError('Failed to load patients data. Please check if the API is running.');
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+        setError(`Failed to load patients data: ${errorMessage}`);
         setPatients([]);
       } finally {
         setLoading(false);
@@ -101,7 +102,7 @@ const Patients: React.FC = () => {
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-red-800">{error}</p>
           <p className="text-sm text-red-600 mt-2">
-            Make sure the ASP.NET Core API is running on https://localhost:5001
+            Make sure the ASP.NET Core API is running on {apiConfig.baseURL.replace('/api', '')}
           </p>
         </div>
       </div>

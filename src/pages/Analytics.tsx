@@ -4,7 +4,7 @@ import CustomBarChart from '../components/Charts/BarChart';
 import CustomPieChart from '../components/Charts/PieChart';
 import MetricCard from '../components/Dashboard/MetricCard';
 import { Users, Activity, AlertTriangle, CheckCircle } from 'lucide-react';
-import { patientsApi, dashboardApi } from '../api';
+import { patientsApi, dashboardApi, apiConfig } from '../api';
 import { Patient, DashboardMetrics } from '../types';
 
 const Analytics: React.FC = () => {
@@ -26,7 +26,8 @@ const Analytics: React.FC = () => {
         setMetrics(metricsData);
       } catch (err) {
         console.error('Error fetching analytics data:', err);
-        setError('Failed to load analytics data. Please check if the API is running.');
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+        setError(`Failed to load analytics data: ${errorMessage}`);
         setPatients([]);
       } finally {
         setLoading(false);
@@ -125,7 +126,7 @@ const Analytics: React.FC = () => {
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-red-800">{error}</p>
           <p className="text-sm text-red-600 mt-2">
-            Make sure the ASP.NET Core API is running on https://localhost:5001
+            Make sure the ASP.NET Core API is running on {apiConfig.baseURL.replace('/api', '')}
           </p>
         </div>
       </div>

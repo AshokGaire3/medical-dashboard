@@ -4,7 +4,7 @@ import MetricCard from '../components/Dashboard/MetricCard';
 import CustomLineChart from '../components/Charts/LineChart';
 import CustomPieChart from '../components/Charts/PieChart';
 import CustomBarChart from '../components/Charts/BarChart';
-import { patientsApi, dashboardApi } from '../api';
+import { patientsApi, dashboardApi, apiConfig } from '../api';
 import { Patient, DashboardMetrics } from '../types';
 
 const Dashboard: React.FC = () => {
@@ -26,7 +26,8 @@ const Dashboard: React.FC = () => {
         setMetrics(metricsData);
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
-        setError('Failed to load dashboard data. Please check if the API is running.');
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+        setError(`Failed to load dashboard data: ${errorMessage}`);
         // Fallback to empty data
         setPatients([]);
         setMetrics({
@@ -244,7 +245,7 @@ const Dashboard: React.FC = () => {
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <p className="text-red-800">{error}</p>
           <p className="text-sm text-red-600 mt-2">
-            Make sure the ASP.NET Core API is running on https://localhost:5001
+            Make sure the ASP.NET Core API is running on {apiConfig.baseURL.replace('/api', '')}
           </p>
         </div>
       </div>

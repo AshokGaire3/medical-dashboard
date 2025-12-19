@@ -20,8 +20,10 @@ function App() {
     }
   };
 
+  const basePath = import.meta.env.VITE_BASE_PATH || '/';
+
   return (
-    <Router>
+    <Router basename={basePath}>
       <div className="flex min-h-screen bg-gray-50">
         <Sidebar 
           isCollapsed={sidebarCollapsed}
