@@ -1,20 +1,47 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Filter, Plus, Users, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 import PatientTable from '../components/Patients/PatientTable';
 import PatientProfile from '../components/Patients/PatientProfile';
-import { mockPatients, mockDoctorStats } from '../data/mockData';
-import { Patient } from '../types';
+import { patientsApi, dashboardApi } from '../api';
+import { Patient, DashboardMetrics } from '../types';
 
 const Patients: React.FC = () => {
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [conditionFilter, setConditionFilter] = useState('All');
   const [patientTypeFilter, setPatientTypeFilter] = useState<'current' | 'historical' | 'all'>('current');
 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const [patientsData, metricsData] = await Promise.all([
+          patientsApi.getAll(),
+          dashboardApi.getMetrics(),
+        ]);
+        setPatients(patientsData);
+        setMetrics(metricsData);
+      } catch (err) {
+        console.error('Error fetching patients data:', err);
+        setError('Failed to load patients data. Please check if the API is running.');
+        setPatients([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   // Separate current and historical patients
-  const currentPatients = mockPatients.filter(p => p.isCurrentPatient);
-  const historicalPatients = mockPatients.filter(p => !p.isCurrentPatient);
+  const currentPatients = patients.filter(p => p.isCurrentPatient);
+  const historicalPatients = patients.filter(p => !p.isCurrentPatient);
 
   // Get patients based on filter
   const getFilteredPatients = () => {
@@ -44,10 +71,10 @@ const Patients: React.FC = () => {
 
   const filteredPatients = useMemo(() => {
     return getFilteredPatients();
-  }, [searchTerm, patientTypeFilter, getFilteredPatients]);
+  }, [searchTerm, statusFilter, conditionFilter, patientTypeFilter, patients]);
 
-  const uniqueConditions = Array.from(new Set(mockPatients.map(p => p.condition)));
-  const uniqueStatuses = Array.from(new Set(mockPatients.map(p => p.status)));
+  const uniqueConditions = Array.from(new Set(patients.map(p => p.condition)));
+  const uniqueStatuses = Array.from(new Set(patients.map(p => p.status)));
 
   // Calculate statistics
   const currentPatientCount = currentPatients.length;
@@ -55,6 +82,31 @@ const Patients: React.FC = () => {
   const stablePatients = currentPatients.filter(p => p.status === 'Stable').length;
   const monitoringPatients = currentPatients.filter(p => p.status === 'Monitoring').length;
   const recoveryPatients = currentPatients.filter(p => p.status === 'Recovery').length;
+  const lifetimePatients = metrics?.lifetimePatients || patients.length;
+
+  if (loading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading patients data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-800">{error}</p>
+          <p className="text-sm text-red-600 mt-2">
+            Make sure the ASP.NET Core API is running on https://localhost:5001
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -100,7 +152,7 @@ const Patients: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Lifetime Patients</p>
-              <p className="text-3xl font-bold text-purple-600">{mockDoctorStats.totalPatientsTreated}</p>
+              <p className="text-3xl font-bold text-purple-600">{lifetimePatients}</p>
               <p className="text-xs text-gray-500">Total ever treated</p>
             </div>
             <div className="p-3 bg-purple-50 rounded-lg">
@@ -113,9 +165,9 @@ const Patients: React.FC = () => {
       {/* Patient Type Tabs */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
         <div className="mb-3 p-3 bg-blue-50 rounded-lg">
-          <p className="text-sm text-blue-800">
-            <strong>Note:</strong> Lifetime patients (1,250) represents total patients ever treated. 
-            Current patients (6) are under active treatment. Historical patients (4) are from our sample data.
+              <p className="text-sm text-blue-800">
+            <strong>Note:</strong> Lifetime patients ({lifetimePatients}) represents total patients ever treated. 
+            Current patients ({currentPatientCount}) are under active treatment. Historical patients ({historicalPatients.length}) are from our database.
           </p>
         </div>
         <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
@@ -147,7 +199,7 @@ const Patients: React.FC = () => {
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            All Patients ({mockPatients.length})
+            All Patients ({patients.length})
           </button>
         </div>
       </div>

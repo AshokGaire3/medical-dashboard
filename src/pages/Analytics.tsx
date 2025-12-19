@@ -1,15 +1,43 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import CustomLineChart from '../components/Charts/LineChart';
 import CustomBarChart from '../components/Charts/BarChart';
 import CustomPieChart from '../components/Charts/PieChart';
 import MetricCard from '../components/Dashboard/MetricCard';
-import { TrendingUp, Users, Activity, BarChart3, AlertTriangle, CheckCircle } from 'lucide-react';
-import { mockPatients, mockDoctorStats } from '../data/mockData';
+import { Users, Activity, AlertTriangle, CheckCircle } from 'lucide-react';
+import { patientsApi, dashboardApi } from '../api';
+import { Patient, DashboardMetrics } from '../types';
 
 const Analytics: React.FC = () => {
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const [patientsData, metricsData] = await Promise.all([
+          patientsApi.getAll(),
+          dashboardApi.getMetrics(),
+        ]);
+        setPatients(patientsData);
+        setMetrics(metricsData);
+      } catch (err) {
+        console.error('Error fetching analytics data:', err);
+        setError('Failed to load analytics data. Please check if the API is running.');
+        setPatients([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   // Get current patients for analytics
-  const currentPatients = mockPatients.filter(p => p.isCurrentPatient);
-  const historicalPatients = mockPatients.filter(p => !p.isCurrentPatient);
+  const currentPatients = patients.filter(p => p.isCurrentPatient);
 
   // Calculate real analytics data from current patients
   const monthlyPatientTrends = [
@@ -80,6 +108,30 @@ const Analytics: React.FC = () => {
     ? Math.round((currentPatients.filter(p => p.status === 'Recovery').length / currentPatients.length) * 100)
     : 0;
 
+  if (loading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading analytics data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-800">{error}</p>
+          <p className="text-sm text-red-600 mt-2">
+            Make sure the ASP.NET Core API is running on https://localhost:5001
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6">
       {/* Analytics Metrics */}
@@ -87,7 +139,7 @@ const Analytics: React.FC = () => {
         <MetricCard
           title="Current Patients"
           value={currentPatients.length}
-          change={`${((currentPatients.length / mockDoctorStats.totalPatientsTreated) * 100).toFixed(1)}% of total`}
+          change={`${metrics && metrics.lifetimePatients > 0 ? ((currentPatients.length / metrics.lifetimePatients) * 100).toFixed(1) : 0}% of total`}
           changeType="positive"
           icon={Users}
           color="blue"
@@ -273,7 +325,11 @@ const Analytics: React.FC = () => {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">Success Rate</span>
-              <span className="font-semibold text-green-600">{mockDoctorStats.successRate}%</span>
+              <span className="font-semibold text-green-600">
+                {metrics && metrics.lifetimePatients > 0 
+                  ? Math.round((metrics.recoveredPatients / metrics.lifetimePatients) * 100) 
+                  : 0}%
+              </span>
             </div>
           </div>
         </div>

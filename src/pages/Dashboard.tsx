@@ -1,12 +1,53 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, UserCheck, AlertTriangle, Heart, Activity, TrendingUp, Thermometer, Droplets, Activity as ActivityIcon, Award, Clock, CheckCircle } from 'lucide-react';
 import MetricCard from '../components/Dashboard/MetricCard';
 import CustomLineChart from '../components/Charts/LineChart';
 import CustomPieChart from '../components/Charts/PieChart';
 import CustomBarChart from '../components/Charts/BarChart';
-import { mockDashboardMetrics, mockPatients, mockDoctorStats } from '../data/mockData';
+import { patientsApi, dashboardApi } from '../api';
+import { Patient, DashboardMetrics } from '../types';
 
 const Dashboard: React.FC = () => {
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const [patientsData, metricsData] = await Promise.all([
+          patientsApi.getAll(),
+          dashboardApi.getMetrics(),
+        ]);
+        setPatients(patientsData);
+        setMetrics(metricsData);
+      } catch (err) {
+        console.error('Error fetching dashboard data:', err);
+        setError('Failed to load dashboard data. Please check if the API is running.');
+        // Fallback to empty data
+        setPatients([]);
+        setMetrics({
+          totalPatients: 0,
+          activePatients: 0,
+          criticalCases: 0,
+          averageHeartRate: 0,
+          averageBloodPressure: '0/0',
+          commonConditions: [],
+          lifetimePatients: 0,
+          currentPatients: 0,
+          recoveredPatients: 0,
+          dischargedPatients: 0,
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
   // Enhanced vital trends data with more precise medical ranges
   const vitalTrendsData = [
     { 
@@ -66,7 +107,7 @@ const Dashboard: React.FC = () => {
   ];
 
   // Get current patients and calculate real data
-  const currentPatients = mockPatients.filter(p => p.isCurrentPatient);
+  const currentPatients = patients.filter(p => p.isCurrentPatient);
   
   // Calculate condition distribution from actual current patient data
   const conditionCounts: { [key: string]: number } = {};
@@ -127,12 +168,20 @@ const Dashboard: React.FC = () => {
   const pieColors = ['#10b981', '#f59e0b', '#ef4444', '#3b82f6', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316'];
 
   // Calculate enhanced metrics
-  const totalPatients = mockPatients.length;
-  const currentPatientCount = currentPatients.length;
-  const criticalPatients = currentPatients.filter(p => p.status === 'Critical').length;
+  const totalPatients = metrics?.totalPatients || patients.length;
+  const currentPatientCount = metrics?.currentPatients || currentPatients.length;
+  const criticalPatients = metrics?.criticalCases || currentPatients.filter(p => p.status === 'Critical').length;
   const monitoringPatients = currentPatients.filter(p => p.status === 'Monitoring').length;
   const stablePatients = currentPatients.filter(p => p.status === 'Stable').length;
   const recoveryPatients = currentPatients.filter(p => p.status === 'Recovery').length;
+  
+  // Use metrics from API or calculate from patients
+  const lifetimePatients = metrics?.lifetimePatients || totalPatients;
+  const recoveredPatients = metrics?.recoveredPatients || 0;
+  const dischargedPatients = metrics?.dischargedPatients || 0;
+  const averageHeartRate = metrics?.averageHeartRate || 0;
+  const averageBloodPressure = metrics?.averageBloodPressure || '0/0';
+  const successRate = lifetimePatients > 0 ? Math.round((recoveredPatients / lifetimePatients) * 100) : 0;
 
   // Helper functions
   function getConditionSeverity(condition: string): string {
@@ -178,14 +227,38 @@ const Dashboard: React.FC = () => {
     return Math.round((criticalCount / groupPatients.length) * 100) / 100;
   }
 
+  if (loading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading dashboard data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-800">{error}</p>
+          <p className="text-sm text-red-600 mt-2">
+            Make sure the ASP.NET Core API is running on https://localhost:5001
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6">
       {/* Lifetime Achievement & Current Focus Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
           title="Lifetime Patients"
-          value={mockDoctorStats.totalPatientsTreated}
-          change={`${mockDoctorStats.yearsOfPractice} years of practice`}
+          value={lifetimePatients}
+          change={`Total patients ever treated`}
           changeType="neutral"
           icon={Award}
           color="blue"
@@ -193,23 +266,23 @@ const Dashboard: React.FC = () => {
         <MetricCard
           title="Current Patients"
           value={currentPatientCount}
-          change={`${((currentPatientCount / mockDoctorStats.totalPatientsTreated) * 100).toFixed(1)}% of total`}
+          change={`${lifetimePatients > 0 ? ((currentPatientCount / lifetimePatients) * 100).toFixed(1) : 0}% of total`}
           changeType="positive"
           icon={Users}
           color="blue"
         />
         <MetricCard
           title="Success Rate"
-          value={`${mockDoctorStats.successRate}%`}
-          change={`${mockDoctorStats.patientsRecovered} patients recovered`}
+          value={`${successRate}%`}
+          change={`${recoveredPatients} patients recovered`}
           changeType="positive"
           icon={CheckCircle}
           color="green"
         />
         <MetricCard
-          title="Avg Treatment Duration"
-          value={`${mockDoctorStats.averageTreatmentDuration} days`}
-          change="Current patients average"
+          title="Avg Heart Rate"
+          value={`${averageHeartRate.toFixed(1)} bpm`}
+          change={`Average across all patients`}
           changeType="neutral"
           icon={Clock}
           color="yellow"
@@ -368,11 +441,11 @@ const Dashboard: React.FC = () => {
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">Total Patients Treated</span>
-              <span className="text-lg font-semibold text-purple-600">{mockDoctorStats.totalPatientsTreated}</span>
+              <span className="text-lg font-semibold text-purple-600">{lifetimePatients}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">Successfully Recovered</span>
-              <span className="text-lg font-semibold text-green-600">{mockDoctorStats.patientsRecovered}</span>
+              <span className="text-lg font-semibold text-green-600">{recoveredPatients}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">Currently Under Care</span>
@@ -380,12 +453,12 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">Years of Practice</span>
-              <span className="text-lg font-semibold text-gray-800">{mockDoctorStats.yearsOfPractice}</span>
+              <span className="text-lg font-semibold text-gray-800">-</span>
             </div>
             <div className="pt-2 border-t border-gray-200">
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium text-gray-700">Overall Success Rate</span>
-                <span className="text-lg font-bold text-green-600">{mockDoctorStats.successRate}%</span>
+                <span className="text-lg font-bold text-green-600">{successRate}%</span>
               </div>
             </div>
           </div>
@@ -401,19 +474,19 @@ const Dashboard: React.FC = () => {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-sm text-gray-600">Total Patients Treated</span>
-                <span className="text-sm font-semibold text-blue-600">{mockDoctorStats.totalPatientsTreated}</span>
+                <span className="text-sm font-semibold text-blue-600">{lifetimePatients}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-600">Successfully Recovered</span>
-                <span className="text-sm font-semibold text-green-600">{mockDoctorStats.patientsRecovered}</span>
+                <span className="text-sm font-semibold text-green-600">{recoveredPatients}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-600">Discharged</span>
-                <span className="text-sm font-semibold text-gray-600">{mockDoctorStats.patientsDischarged}</span>
+                <span className="text-sm font-semibold text-gray-600">{dischargedPatients}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-gray-600">Years of Practice</span>
-                <span className="text-sm font-semibold text-gray-800">{mockDoctorStats.yearsOfPractice}</span>
+                <span className="text-sm font-semibold text-gray-800">-</span>
               </div>
             </div>
           </div>
