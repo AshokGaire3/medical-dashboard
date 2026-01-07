@@ -1,11 +1,43 @@
 // API Configuration
-// Ensure HTTP is used for localhost:5000 (not HTTPS)
-let API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// Detect if we're in production (deployed) or development
+const isProduction = import.meta.env.PROD;
+const isLocalhost = typeof window !== 'undefined' && 
+  (window.location.hostname === 'localhost' || 
+   window.location.hostname === '127.0.0.1' ||
+   window.location.hostname === '');
+
+// Determine API URL based on environment
+let API_BASE_URL = import.meta.env.VITE_API_URL;
+
+// If no explicit API URL is set, use defaults based on environment
+if (!API_BASE_URL) {
+  if (isProduction && !isLocalhost) {
+    // Production: Use production API URL (you need to set this)
+    // For now, this will show an error - you need to deploy your backend
+    // and set VITE_API_URL in your build process
+    API_BASE_URL = import.meta.env.VITE_PROD_API_URL || '';
+    if (!API_BASE_URL) {
+      console.error(
+        '⚠️ Production API URL not configured!\n' +
+        'Set VITE_PROD_API_URL environment variable during build, or\n' +
+        'deploy your backend and update the API URL in config.ts'
+      );
+    }
+  } else {
+    // Development: Use localhost
+    API_BASE_URL = 'http://localhost:5000/api/';
+  }
+}
 
 // Auto-fix common mistake: HTTPS on port 5000 should be HTTP
 if (API_BASE_URL.startsWith('https://localhost:5000')) {
   API_BASE_URL = API_BASE_URL.replace('https://', 'http://');
   console.warn('API URL was using HTTPS on port 5000. Changed to HTTP:', API_BASE_URL);
+}
+
+// Log the API URL being used (helpful for debugging)
+if (import.meta.env.DEV) {
+  console.log('🔧 API Base URL:', API_BASE_URL);
 }
 
 export const apiConfig = {
