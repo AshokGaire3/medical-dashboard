@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "predeploy": "npm run build",
+    "build:gh-pages": "VITE_BASE_PATH=/Medical-Dashboard/ VITE_PROD_API_URL=${VITE_PROD_API_URL:-} vite build",
+    "predeploy": "npm run build:gh-pages",
     "deploy": "gh-pages -d dist",
     "lint": "eslint .",
     "preview": "vite preview"

@@ -22,10 +22,40 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReact", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "http://localhost:3000")
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
+        if (builder.Environment.IsDevelopment())
+        {
+            // More permissive in development
+            policy.AllowAnyOrigin()
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+        }
+        else
+        {
+            // Production: Allow specific origins including GitHub Pages
+            // Get allowed origins from configuration or use defaults
+            var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() 
+                ?? new[] { 
+                    "http://localhost:5173", 
+                    "http://localhost:3000"
+                };
+            
+            policy.SetIsOriginAllowed(origin =>
+            {
+                // Allow configured origins
+                if (allowedOrigins.Contains(origin))
+                    return true;
+                
+                // Allow all GitHub Pages subdomains (https://username.github.io)
+                if (origin.EndsWith(".github.io", StringComparison.OrdinalIgnoreCase) && 
+                    origin.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                    return true;
+                
+                return false;
+            })
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+        }
     });
 });
 
@@ -38,9 +68,16 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
-
+// CORS must be before UseHttpsRedirection and UseAuthorization
 app.UseCors("AllowReact");
+
+// Only redirect to HTTPS in production
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
+app.UseRouting();
 
 app.UseAuthorization();
 
