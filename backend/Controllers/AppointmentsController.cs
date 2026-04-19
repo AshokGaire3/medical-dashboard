@@ -85,6 +85,7 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [Authorize(Roles = "Doctor,Admin")]
     public async Task<IActionResult> Update(int id, [FromBody] AppointmentDto dto)
     {
         var entity = await _context.Appointments.FindAsync(id);
@@ -120,6 +121,7 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Roles = "Doctor,Admin")]
     public async Task<IActionResult> Delete(int id)
     {
         var entity = await _context.Appointments.FindAsync(id);
