@@ -1,6 +1,6 @@
 import React from 'react';
 import { Patient } from '../../types';
-import { Eye, Phone, Mail, Clock, CheckCircle } from 'lucide-react';
+import { Eye, Clock } from 'lucide-react';
 
 interface PatientTableProps {
   patients: Patient[];

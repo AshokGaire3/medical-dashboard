@@ -1,293 +1,420 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Filter, Plus, Users, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
-import PatientTable from '../components/Patients/PatientTable';
+import { useMemo, useState } from 'react';
+import {
+  Search,
+  Plus,
+  Users,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  Pencil,
+  Trash2,
+  Eye,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
 import PatientProfile from '../components/Patients/PatientProfile';
-import { patientsApi, dashboardApi, apiConfig } from '../api';
-import { Patient, DashboardMetrics } from '../types';
+import { PatientFormModal } from '../components/Patients/PatientFormModal';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Select } from '../components/ui/Select';
+import { StatusBadge } from '../components/ui/Badge';
+import { EmptyState } from '../components/ui/EmptyState';
+import { ErrorState } from '../components/ui/ErrorState';
+import { Spinner } from '../components/ui/Spinner';
+import { useDeletePatient, usePatients } from '../hooks/usePatients';
+import { useDashboardMetrics } from '../hooks/useDashboard';
+import { useDebounce } from '../hooks/useDebounce';
+import { PATIENT_STATUSES } from '../utils/constants';
+import type { Patient, PatientStatus } from '../types';
 
-const Patients: React.FC = () => {
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
-  const [conditionFilter, setConditionFilter] = useState('All');
-  const [patientTypeFilter, setPatientTypeFilter] = useState<'current' | 'historical' | 'all'>('current');
+type TypeFilter = 'current' | 'historical' | 'all';
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const [patientsData, metricsData] = await Promise.all([
-          patientsApi.getAll(),
-          dashboardApi.getMetrics(),
-        ]);
-        setPatients(patientsData);
-        setMetrics(metricsData);
-      } catch (err) {
-        console.error('Error fetching patients data:', err);
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
-        setError(`Failed to load patients data: ${errorMessage}`);
-        setPatients([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+export default function Patients() {
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<PatientStatus | ''>('');
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('current');
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(10);
+  const [selected, setSelected] = useState<Patient | null>(null);
+  const [editing, setEditing] = useState<Patient | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<Patient | null>(null);
 
-    fetchData();
-  }, []);
+  const debouncedSearch = useDebounce(search, 300);
+  const isCurrent = typeFilter === 'all' ? undefined : typeFilter === 'current';
 
-  // Separate current and historical patients
-  const currentPatients = patients.filter(p => p.isCurrentPatient);
-  const historicalPatients = patients.filter(p => !p.isCurrentPatient);
+  const query = usePatients({
+    search: debouncedSearch || undefined,
+    status: statusFilter || undefined,
+    isCurrent,
+    page,
+    pageSize,
+    sortBy: 'name',
+    sortDir: 'asc',
+  });
 
-  // Get patients based on filter
-  const getFilteredPatients = () => {
-    let patients: Patient[] = [];
-    
-    switch (patientTypeFilter) {
-      case 'current':
-        patients = currentPatients;
-        break;
-      case 'historical':
-        patients = historicalPatients;
-        break;
-      case 'all':
-        patients = mockPatients;
-        break;
-    }
+  const metricsQ = useDashboardMetrics();
+  const del = useDeletePatient();
 
-    return patients.filter(patient => {
-      const matchesSearch = patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          patient.condition.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === 'All' || patient.status === statusFilter;
-      const matchesCondition = conditionFilter === 'All' || patient.condition === conditionFilter;
-      
-      return matchesSearch && matchesStatus && matchesCondition;
-    });
-  };
+  const patients = query.data?.items ?? [];
+  const total = query.data?.total ?? 0;
+  const totalPages = query.data?.totalPages ?? 1;
 
-  const filteredPatients = useMemo(() => {
-    return getFilteredPatients();
-  }, [searchTerm, statusFilter, conditionFilter, patientTypeFilter, patients]);
+  const metrics = metricsQ.data;
 
-  const uniqueConditions = Array.from(new Set(patients.map(p => p.condition)));
-  const uniqueStatuses = Array.from(new Set(patients.map(p => p.status)));
-
-  // Calculate statistics
-  const currentPatientCount = currentPatients.length;
-  const criticalPatients = currentPatients.filter(p => p.status === 'Critical').length;
-  const stablePatients = currentPatients.filter(p => p.status === 'Stable').length;
-  const monitoringPatients = currentPatients.filter(p => p.status === 'Monitoring').length;
-  const recoveryPatients = currentPatients.filter(p => p.status === 'Recovery').length;
-  const lifetimePatients = metrics?.lifetimePatients || patients.length;
-
-  if (loading) {
-    return (
-      <div className="p-6 flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading patients data...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-800">{error}</p>
-          <p className="text-sm text-red-600 mt-2">
-            Make sure the ASP.NET Core API is running on {apiConfig.baseURL.replace('/api', '')}
-          </p>
-        </div>
-      </div>
-    );
-  }
+  const counts = useMemo(
+    () => ({
+      current: metrics?.currentPatients ?? 0,
+      critical: metrics?.criticalCases ?? 0,
+      recovered: metrics?.recoveredPatients ?? 0,
+      lifetime: metrics?.lifetimePatients ?? 0,
+    }),
+    [metrics],
+  );
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header with Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Current Patients</p>
-              <p className="text-3xl font-bold text-blue-600">{currentPatientCount}</p>
-              <p className="text-xs text-gray-500">Under active treatment</p>
-            </div>
-            <div className="p-3 bg-blue-50 rounded-lg">
-              <Users className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Critical Cases</p>
-              <p className="text-3xl font-bold text-red-600">{criticalPatients}</p>
-              <p className="text-xs text-gray-500">Require immediate attention</p>
-            </div>
-            <div className="p-3 bg-red-50 rounded-lg">
-              <AlertTriangle className="w-6 h-6 text-red-600" />
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">In Recovery</p>
-              <p className="text-3xl font-bold text-green-600">{recoveryPatients}</p>
-              <p className="text-xs text-gray-500">Showing improvement</p>
-            </div>
-            <div className="p-3 bg-green-50 rounded-lg">
-              <CheckCircle className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Lifetime Patients</p>
-              <p className="text-3xl font-bold text-purple-600">{lifetimePatients}</p>
-              <p className="text-xs text-gray-500">Total ever treated</p>
-            </div>
-            <div className="p-3 bg-purple-50 rounded-lg">
-              <Clock className="w-6 h-6 text-purple-600" />
-            </div>
-          </div>
+        <StatCard icon={Users} color="blue" label="Current" value={counts.current} hint="Active" />
+        <StatCard
+          icon={AlertTriangle}
+          color="red"
+          label="Critical"
+          value={counts.critical}
+          hint="Need attention"
+        />
+        <StatCard
+          icon={CheckCircle}
+          color="green"
+          label="Recovered"
+          value={counts.recovered}
+          hint="Lifetime"
+        />
+        <StatCard icon={Clock} color="purple" label="Lifetime" value={counts.lifetime} hint="Total" />
+      </div>
+
+      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-4">
+        <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg w-full">
+          {(['current', 'historical', 'all'] as TypeFilter[]).map((t) => (
+            <button
+              key={t}
+              onClick={() => {
+                setTypeFilter(t);
+                setPage(1);
+              }}
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium capitalize transition-colors ${
+                typeFilter === t
+                  ? 'bg-white dark:bg-gray-900 text-blue-600 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
+              }`}
+            >
+              {t}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Patient Type Tabs */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-        <div className="mb-3 p-3 bg-blue-50 rounded-lg">
-              <p className="text-sm text-blue-800">
-            <strong>Note:</strong> Lifetime patients ({lifetimePatients}) represents total patients ever treated. 
-            Current patients ({currentPatientCount}) are under active treatment. Historical patients ({historicalPatients.length}) are from our database.
-          </p>
-        </div>
-        <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
-          <button
-            onClick={() => setPatientTypeFilter('current')}
-            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-              patientTypeFilter === 'current'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Current Patients ({currentPatientCount})
-          </button>
-          <button
-            onClick={() => setPatientTypeFilter('historical')}
-            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-              patientTypeFilter === 'historical'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Historical Patients ({historicalPatients.length})
-          </button>
-          <button
-            onClick={() => setPatientTypeFilter('all')}
-            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-              patientTypeFilter === 'all'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            All Patients ({patients.length})
-          </button>
-        </div>
-      </div>
-
-      {/* Search and Filters */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder={`Search ${patientTypeFilter} patients by name or condition...`}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-4">
+        <div className="flex flex-col md:flex-row gap-3 md:items-end">
+          <div className="flex-1">
+            <Input
+              leftIcon={<Search className="w-4 h-4" />}
+              placeholder="Search by name or condition…"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
             />
           </div>
-          <div className="flex gap-4">
-            <select
+          <div className="w-full md:w-56">
+            <Select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="All">All Status</option>
-              {uniqueStatuses.map(status => (
-                <option key={status} value={status}>{status}</option>
-              ))}
-            </select>
-            <select
-              value={conditionFilter}
-              onChange={(e) => setConditionFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="All">All Conditions</option>
-              {uniqueConditions.map(condition => (
-                <option key={condition} value={condition}>{condition}</option>
-              ))}
-            </select>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2">
-              <Plus className="w-4 h-4" />
-              <span>Add Patient</span>
-            </button>
+              onChange={(e) => {
+                setStatusFilter(e.target.value as PatientStatus | '');
+                setPage(1);
+              }}
+              options={[
+                { value: '', label: 'All statuses' },
+                ...PATIENT_STATUSES.map((s) => ({ value: s, label: s })),
+              ]}
+            />
           </div>
+          <Button leftIcon={<Plus className="w-4 h-4" />} onClick={() => setCreating(true)}>
+            Add patient
+          </Button>
         </div>
       </div>
 
-      {/* Current Patient Status Summary */}
-      {patientTypeFilter === 'current' && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Current Patient Status Overview</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-4 bg-green-50 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">{stablePatients}</div>
-              <div className="text-sm text-gray-600">Stable</div>
-            </div>
-            <div className="text-center p-4 bg-yellow-50 rounded-lg">
-              <div className="text-2xl font-bold text-yellow-600">{monitoringPatients}</div>
-              <div className="text-sm text-gray-600">Monitoring</div>
-            </div>
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">{recoveryPatients}</div>
-              <div className="text-sm text-gray-600">Recovery</div>
-            </div>
-            <div className="text-center p-4 bg-red-50 rounded-lg">
-              <div className="text-2xl font-bold text-red-600">{criticalPatients}</div>
-              <div className="text-sm text-gray-600">Critical</div>
-            </div>
+      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 capitalize">
+              {typeFilter} patients
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {total} patient{total !== 1 ? 's' : ''}
+            </p>
           </div>
         </div>
-      )}
 
-      {/* Patient Table */}
-      <PatientTable 
-        patients={filteredPatients}
-        onViewPatient={setSelectedPatient}
-        patientType={patientTypeFilter}
-      />
+        {query.isLoading ? (
+          <div className="py-12 flex justify-center">
+            <Spinner size="lg" label="Loading patients…" />
+          </div>
+        ) : query.isError ? (
+          <ErrorState
+            message={(query.error as Error)?.message ?? 'Could not load patients'}
+            onRetry={() => query.refetch()}
+          />
+        ) : patients.length === 0 ? (
+          <EmptyState
+            title="No patients found"
+            description="Try adjusting your search or filters, or add a new patient."
+            action={
+              <Button onClick={() => setCreating(true)} leftIcon={<Plus className="w-4 h-4" />}>
+                Add patient
+              </Button>
+            }
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 dark:bg-gray-800/60">
+                <tr>
+                  <Th>Patient</Th>
+                  <Th>Age</Th>
+                  <Th>Condition</Th>
+                  <Th>Status</Th>
+                  <Th>Last visit</Th>
+                  <Th className="text-right pr-6">Actions</Th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                {patients.map((p) => (
+                  <tr key={p.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                    <td className="px-6 py-3">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-9 h-9 rounded-full flex items-center justify-center ${
+                            p.isCurrentPatient
+                              ? 'bg-blue-100 dark:bg-blue-900/40'
+                              : 'bg-gray-100 dark:bg-gray-800'
+                          }`}
+                        >
+                          <span
+                            className={`text-sm font-semibold ${
+                              p.isCurrentPatient
+                                ? 'text-blue-700 dark:text-blue-300'
+                                : 'text-gray-600 dark:text-gray-300'
+                            }`}
+                          >
+                            {p.name
+                              .split(' ')
+                              .map((n) => n[0])
+                              .slice(0, 2)
+                              .join('')}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                            {p.name}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{p.gender}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300">{p.age}</td>
+                    <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300">
+                      {p.condition}
+                    </td>
+                    <td className="px-6 py-3">
+                      <StatusBadge status={p.status} />
+                    </td>
+                    <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300">
+                      {p.lastVisit ? new Date(p.lastVisit).toLocaleDateString() : '—'}
+                    </td>
+                    <td className="px-6 py-3 text-right pr-6">
+                      <div className="inline-flex items-center gap-1">
+                        <IconButton onClick={() => setSelected(p)} title="View">
+                          <Eye className="w-4 h-4" />
+                        </IconButton>
+                        <IconButton onClick={() => setEditing(p)} title="Edit">
+                          <Pencil className="w-4 h-4" />
+                        </IconButton>
+                        <IconButton
+                          onClick={() => setConfirmDelete(p)}
+                          title="Delete"
+                          variant="danger"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </IconButton>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-      {/* Patient Profile Modal */}
-      {selectedPatient && (
-        <PatientProfile
-          patient={selectedPatient}
-          onClose={() => setSelectedPatient(null)}
+        {totalPages > 1 && (
+          <div className="px-6 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-800">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Page {page} of {totalPages} · {total} total
+            </p>
+            <div className="flex gap-1">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={page <= 1}
+                onClick={() => setPage((x) => Math.max(1, x - 1))}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={page >= totalPages}
+                onClick={() => setPage((x) => Math.min(totalPages, x + 1))}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {selected && <PatientProfile patient={selected} onClose={() => setSelected(null)} />}
+      <PatientFormModal open={creating} onClose={() => setCreating(false)} />
+      <PatientFormModal open={Boolean(editing)} onClose={() => setEditing(null)} patient={editing} />
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title={`Delete ${confirmDelete.name}?`}
+          description="This cannot be undone. All associated vitals and appointments will also be removed."
+          confirmText="Delete"
+          loading={del.isPending}
+          onCancel={() => setConfirmDelete(null)}
+          onConfirm={async () => {
+            await del.mutateAsync(confirmDelete.id);
+            setConfirmDelete(null);
+          }}
         />
       )}
     </div>
   );
-};
+}
 
-export default Patients;
+function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <th
+      className={`px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider ${className}`}
+    >
+      {children}
+    </th>
+  );
+}
+
+function IconButton({
+  children,
+  onClick,
+  title,
+  variant = 'default',
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  title?: string;
+  variant?: 'default' | 'danger';
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      className={`p-1.5 rounded-md transition-colors ${
+        variant === 'danger'
+          ? 'text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20'
+          : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function StatCard({
+  icon: Icon,
+  color,
+  label,
+  value,
+  hint,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  color: 'blue' | 'red' | 'green' | 'purple';
+  label: string;
+  value: number;
+  hint?: string;
+}) {
+  const tones: Record<string, string> = {
+    blue: 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300',
+    red: 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-300',
+    green: 'bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-300',
+    purple: 'bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300',
+  };
+  return (
+    <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{label}</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{value}</p>
+          {hint ? <p className="text-xs text-gray-500 dark:text-gray-400">{hint}</p> : null}
+        </div>
+        <div className={`p-3 rounded-lg ${tones[color]}`}>
+          <Icon className="w-6 h-6" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ConfirmDialog({
+  title,
+  description,
+  confirmText = 'Confirm',
+  loading,
+  onConfirm,
+  onCancel,
+}: {
+  title: string;
+  description?: string;
+  confirmText?: string;
+  loading?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={onCancel}
+    >
+      <div
+        className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-sm p-6 border border-gray-200 dark:border-gray-800"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
+        {description ? (
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{description}</p>
+        ) : null}
+        <div className="mt-6 flex justify-end gap-2">
+          <Button variant="outline" onClick={onCancel} disabled={loading}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={onConfirm} loading={loading}>
+            {confirmText}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Patient } from '../../types';
 import { 
-  X, Phone, Mail, MapPin, Calendar, User, Heart, 
-  Pill, FileText, AlertTriangle, Clock, Activity,
-  Stethoscope, TestTube, ClipboardList, UserCheck
+  X, Phone, Mail, MapPin, User, Heart, 
+  Pill, FileText, AlertTriangle, Activity,
+  Stethoscope, TestTube, UserCheck
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
