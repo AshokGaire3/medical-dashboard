@@ -1,106 +1,163 @@
+using System.Text;
+using MedicalDashboard.Api.Auth;
 using MedicalDashboard.Api.Data;
+using MedicalDashboard.Api.Middleware;
 using MedicalDashboard.Api.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+// --- Configuration: database provider (SQLite fallback) --------------------
+var connStr = builder.Configuration.GetConnectionString("DefaultConnection")
+              ?? "Data Source=meddash.db";
+var useSqlite = connStr.Contains("Data Source=", StringComparison.OrdinalIgnoreCase)
+                && !connStr.Contains("Server=", StringComparison.OrdinalIgnoreCase);
 
-// Configure Entity Framework with SQL Server
 builder.Services.AddDbContext<MedicalContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+    if (useSqlite)
+        options.UseSqlite(connStr);
+    else
+        options.UseSqlServer(connStr);
+});
 
-// Register application services
+// --- JWT auth --------------------------------------------------------------
+var jwtSection = builder.Configuration.GetSection(JwtOptions.SectionName);
+builder.Services.Configure<JwtOptions>(jwtSection);
+var jwtOptions = jwtSection.Get<JwtOptions>() ?? new JwtOptions();
+
+// Provide a dev-only key if nothing is configured so local setup works out-of-the-box.
+if (string.IsNullOrWhiteSpace(jwtOptions.Key) || jwtOptions.Key.Length < 32)
+{
+    if (builder.Environment.IsDevelopment())
+    {
+        jwtOptions.Key = "dev-only-insecure-key-change-me-32chars-minimum!";
+        builder.Services.PostConfigure<JwtOptions>(o => o.Key = jwtOptions.Key);
+    }
+    else
+    {
+        throw new InvalidOperationException("Jwt:Key must be configured in non-development environments (>= 32 chars).");
+    }
+}
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtOptions.Issuer,
+            ValidAudience = jwtOptions.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key)),
+            ClockSkew = TimeSpan.FromSeconds(30),
+        };
+    });
+
+builder.Services.AddAuthorization();
+
+// --- App services ----------------------------------------------------------
+builder.Services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
+builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IPatientService, PatientService>();
 
-// Configure CORS for React frontend
+builder.Services.AddControllers();
+
+// --- Swagger with JWT ------------------------------------------------------
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Medical Dashboard API", Version = "v1" });
+    var scheme = new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Description = "Paste your JWT (no 'Bearer ' prefix needed).",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        Reference = new OpenApiReference { Id = "Bearer", Type = ReferenceType.SecurityScheme },
+    };
+    c.AddSecurityDefinition("Bearer", scheme);
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement { [scheme] = new List<string>() });
+});
+
+// --- CORS ------------------------------------------------------------------
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReact", policy =>
     {
         if (builder.Environment.IsDevelopment())
         {
-            // More permissive in development
-            policy.AllowAnyOrigin()
+            policy.SetIsOriginAllowed(_ => true)
                   .AllowAnyHeader()
-                  .AllowAnyMethod();
+                  .AllowAnyMethod()
+                  .AllowCredentials();
         }
         else
         {
-            // Production: Allow specific origins including GitHub Pages
-            // Get allowed origins from configuration or use defaults
-            var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() 
-                ?? new[] { 
-                    "http://localhost:5173", 
-                    "http://localhost:3000"
-                };
-            
+            var allowed = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+                          ?? new[] { "http://localhost:5173", "http://localhost:3000" };
             policy.SetIsOriginAllowed(origin =>
-            {
-                // Allow configured origins
-                if (allowedOrigins.Contains(origin))
-                    return true;
-                
-                // Allow all GitHub Pages subdomains (https://username.github.io)
-                if (origin.EndsWith(".github.io", StringComparison.OrdinalIgnoreCase) && 
-                    origin.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-                    return true;
-                
-                return false;
-            })
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials();
+                  {
+                      if (allowed.Contains(origin)) return true;
+                      if (origin.EndsWith(".github.io", StringComparison.OrdinalIgnoreCase)
+                          && origin.StartsWith("https://", StringComparison.OrdinalIgnoreCase)) return true;
+                      return false;
+                  })
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
         }
     });
 });
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline
+// --- Pipeline --------------------------------------------------------------
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-// CORS must be before UseHttpsRedirection and UseAuthorization
 app.UseCors("AllowReact");
 
-// Only redirect to HTTPS in production
 if (!app.Environment.IsDevelopment())
-{
     app.UseHttpsRedirection();
-}
 
 app.UseRouting();
-
+app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 
-// Seed database on startup (only in development)
-if (app.Environment.IsDevelopment())
+// --- DB init + seed --------------------------------------------------------
+using (var scope = app.Services.CreateScope())
 {
-    using (var scope = app.Services.CreateScope())
+    var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
+    try
     {
-        var services = scope.ServiceProvider;
-        var context = services.GetRequiredService<MedicalContext>();
-        try
-        {
-            await DbSeeder.SeedAsync(context);
-        }
-        catch (Exception ex)
-        {
-            var logger = services.GetRequiredService<ILogger<Program>>();
-            logger.LogError(ex, "An error occurred while seeding the database.");
-        }
+        var ctx = services.GetRequiredService<MedicalContext>();
+
+        // For this demo we use EnsureCreated to avoid migration drift.
+        // For production hardening: switch to MigrateAsync and maintain proper migrations.
+        await ctx.Database.EnsureCreatedAsync();
+
+        await DbSeeder.SeedAsync(ctx, services);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "An error occurred while initializing/seeding the database.");
     }
 }
 
 app.Run();
-
