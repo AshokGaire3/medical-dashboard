@@ -1,3 +1,4 @@
+using MedicalDashboard.Api.Auth;
 using MedicalDashboard.Api.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -5,15 +6,14 @@ namespace MedicalDashboard.Api.Data;
 
 public static class DbSeeder
 {
-    public static async Task SeedAsync(MedicalContext context)
+    public static async Task SeedAsync(MedicalContext context, IServiceProvider services)
     {
-        // Ensure database is created
-        await context.Database.EnsureCreatedAsync();
+        await SeedUsersAsync(context, services);
 
-        // Check if data already exists
         if (await context.Patients.AnyAsync())
         {
-            return; // Database already seeded
+            await SeedAppointmentsAsync(context);
+            return;
         }
 
         // Create sample patients
@@ -420,8 +420,92 @@ public static class DbSeeder
             }
         };
 
-        // Add patients to context
         await context.Patients.AddRangeAsync(patients);
+        await context.SaveChangesAsync();
+
+        await SeedAppointmentsAsync(context);
+    }
+
+    private static async Task SeedUsersAsync(MedicalContext context, IServiceProvider services)
+    {
+        if (await context.Users.AnyAsync()) return;
+
+        var hasher = services.GetRequiredService<IPasswordHasher>();
+        var defaultPassword = hasher.Hash("Password123!");
+
+        var users = new[]
+        {
+            new User
+            {
+                Name = "Dr. Alex Smith",
+                Email = "doctor@meddash.local",
+                PasswordHash = defaultPassword,
+                Role = "Doctor",
+                PracticeStartDate = DateTime.Parse("2014-06-01"),
+            },
+            new User
+            {
+                Name = "Nurse Jamie Lee",
+                Email = "nurse@meddash.local",
+                PasswordHash = defaultPassword,
+                Role = "Nurse",
+            },
+            new User
+            {
+                Name = "Admin",
+                Email = "admin@meddash.local",
+                PasswordHash = defaultPassword,
+                Role = "Admin",
+            },
+        };
+
+        await context.Users.AddRangeAsync(users);
+        await context.SaveChangesAsync();
+    }
+
+    private static async Task SeedAppointmentsAsync(MedicalContext context)
+    {
+        if (await context.Appointments.AnyAsync()) return;
+
+        var currentPatients = await context.Patients
+            .Where(p => p.IsCurrentPatient)
+            .Take(5)
+            .ToListAsync();
+
+        if (currentPatients.Count == 0) return;
+
+        var now = DateTime.UtcNow;
+        var appointments = new List<Appointment>();
+        var rand = new Random(42);
+        var reasons = new[]
+        {
+            "Routine follow-up", "Medication review", "Lab results review",
+            "Annual checkup", "Blood pressure check", "Consultation",
+        };
+
+        foreach (var patient in currentPatients)
+        {
+            appointments.Add(new Appointment
+            {
+                PatientId = patient.Id,
+                ScheduledAt = now.AddDays(rand.Next(1, 14)).AddHours(rand.Next(8, 17)),
+                DurationMinutes = 30,
+                Reason = reasons[rand.Next(reasons.Length)],
+                Status = "Scheduled",
+            });
+
+            appointments.Add(new Appointment
+            {
+                PatientId = patient.Id,
+                ScheduledAt = now.AddDays(-rand.Next(1, 30)).AddHours(rand.Next(8, 17)),
+                DurationMinutes = 30,
+                Reason = reasons[rand.Next(reasons.Length)],
+                Status = "Completed",
+                Notes = "Vitals normal; continue current plan.",
+            });
+        }
+
+        await context.Appointments.AddRangeAsync(appointments);
         await context.SaveChangesAsync();
     }
 }

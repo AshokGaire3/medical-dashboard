@@ -1,6 +1,7 @@
 using MedicalDashboard.Api.Data;
 using MedicalDashboard.Api.Models;
 using MedicalDashboard.Api.Models.DTOs;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
@@ -8,6 +9,7 @@ using System.Text.Json;
 namespace MedicalDashboard.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 public class PatientsController : ControllerBase
 {
@@ -20,132 +22,136 @@ public class PatientsController : ControllerBase
         _logger = logger;
     }
 
-    // GET: api/patients
+    // GET: api/patients?search=&status=&isCurrent=&page=&pageSize=&sortBy=&sortDir=
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<PatientDto>>> GetPatients()
+    public async Task<ActionResult<PagedResultDto<PatientDto>>> GetPatients(
+        [FromQuery] string? search,
+        [FromQuery] string? status,
+        [FromQuery] bool? isCurrent,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string sortBy = "name",
+        [FromQuery] string sortDir = "asc")
     {
-        try
-        {
-            var patients = await _context.Patients
-                .Include(p => p.Vitals)
-                .Include(p => p.MedicalHistory)
-                .Include(p => p.Medications)
-                .Include(p => p.TestResults)
-                .ToListAsync();
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
 
-            var patientDtos = patients.Select(p => MapToDto(p)).ToList();
-            return Ok(patientDtos);
-        }
-        catch (Exception ex)
+        var query = _context.Patients
+            .Include(p => p.Vitals)
+            .Include(p => p.MedicalHistory)
+            .Include(p => p.Medications)
+            .Include(p => p.TestResults)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(search))
         {
-            _logger.LogError(ex, "Error fetching patients");
-            return StatusCode(500, "An error occurred while fetching patients");
+            var term = search.Trim().ToLower();
+            query = query.Where(p =>
+                p.Name.ToLower().Contains(term) ||
+                p.Condition.ToLower().Contains(term));
         }
+
+        if (!string.IsNullOrWhiteSpace(status))
+            query = query.Where(p => p.Status == status);
+
+        if (isCurrent.HasValue)
+            query = query.Where(p => p.IsCurrentPatient == isCurrent.Value);
+
+        query = (sortBy?.ToLower(), sortDir?.ToLower()) switch
+        {
+            ("age", "desc") => query.OrderByDescending(p => p.Age),
+            ("age", _) => query.OrderBy(p => p.Age),
+            ("lastvisit", "desc") => query.OrderByDescending(p => p.LastVisit),
+            ("lastvisit", _) => query.OrderBy(p => p.LastVisit),
+            (_, "desc") => query.OrderByDescending(p => p.Name),
+            _ => query.OrderBy(p => p.Name),
+        };
+
+        var total = await query.CountAsync();
+        var patients = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return Ok(new PagedResultDto<PatientDto>
+        {
+            Items = patients.Select(MapToDto).ToList(),
+            Page = page,
+            PageSize = pageSize,
+            Total = total,
+        });
     }
 
-    // GET: api/patients/5
     [HttpGet("{id}")]
     public async Task<ActionResult<PatientDto>> GetPatient(int id)
     {
-        try
-        {
-            var patient = await _context.Patients
-                .Include(p => p.Vitals)
-                .Include(p => p.MedicalHistory)
-                .Include(p => p.Medications)
-                .Include(p => p.TestResults)
-                .FirstOrDefaultAsync(p => p.Id == id);
+        var patient = await _context.Patients
+            .Include(p => p.Vitals)
+            .Include(p => p.MedicalHistory)
+            .Include(p => p.Medications)
+            .Include(p => p.TestResults)
+            .FirstOrDefaultAsync(p => p.Id == id);
 
-            if (patient == null)
-            {
-                return NotFound();
-            }
-
-            return Ok(MapToDto(patient));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error fetching patient {PatientId}", id);
-            return StatusCode(500, "An error occurred while fetching patient");
-        }
+        return patient is null ? NotFound() : Ok(MapToDto(patient));
     }
 
-    // POST: api/patients
     [HttpPost]
     public async Task<ActionResult<PatientDto>> CreatePatient(PatientDto patientDto)
     {
-        try
-        {
-            var patient = MapFromDto(patientDto);
-            _context.Patients.Add(patient);
-            await _context.SaveChangesAsync();
+        if (string.IsNullOrWhiteSpace(patientDto.Name))
+            return BadRequest(new { message = "Name is required." });
+        if (patientDto.Age < 0 || patientDto.Age > 130)
+            return BadRequest(new { message = "Age must be between 0 and 130." });
 
-            var createdDto = MapToDto(patient);
-            return CreatedAtAction(nameof(GetPatient), new { id = patient.Id }, createdDto);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error creating patient");
-            return StatusCode(500, "An error occurred while creating patient");
-        }
+        var patient = MapFromDto(patientDto);
+        patient.Id = 0;
+        patient.CreatedAt = DateTime.UtcNow;
+
+        _context.Patients.Add(patient);
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Patient created {PatientId}", patient.Id);
+        return CreatedAtAction(nameof(GetPatient), new { id = patient.Id }, MapToDto(patient));
     }
 
-    // PUT: api/patients/5
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdatePatient(int id, PatientDto patientDto)
     {
-        if (id != patientDto.Id)
-        {
-            return BadRequest();
-        }
+        if (id != patientDto.Id) return BadRequest();
 
-        try
-        {
-            var patient = await _context.Patients.FindAsync(id);
-            if (patient == null)
-            {
-                return NotFound();
-            }
+        var patient = await _context.Patients.FindAsync(id);
+        if (patient is null) return NotFound();
 
-            UpdatePatientFromDto(patient, patientDto);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error updating patient {PatientId}", id);
-            return StatusCode(500, "An error occurred while updating patient");
-        }
+        UpdatePatientFromDto(patient, patientDto);
+        patient.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+        return NoContent();
     }
 
-    // DELETE: api/patients/5
     [HttpDelete("{id}")]
+    [Authorize(Roles = "Doctor,Admin")]
     public async Task<IActionResult> DeletePatient(int id)
     {
-        try
-        {
-            var patient = await _context.Patients.FindAsync(id);
-            if (patient == null)
-            {
-                return NotFound();
-            }
+        var patient = await _context.Patients.FindAsync(id);
+        if (patient is null) return NotFound();
 
-            _context.Patients.Remove(patient);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error deleting patient {PatientId}", id);
-            return StatusCode(500, "An error occurred while deleting patient");
-        }
+        _context.Patients.Remove(patient);
+        await _context.SaveChangesAsync();
+        _logger.LogInformation("Patient deleted {PatientId}", id);
+        return NoContent();
     }
 
-    private PatientDto MapToDto(Patient patient)
+    private static PatientDto MapToDto(Patient patient)
     {
-        var allergies = JsonSerializer.Deserialize<List<string>>(patient.AllergiesJson) ?? new List<string>();
+        List<string> allergies;
+        try
+        {
+            allergies = JsonSerializer.Deserialize<List<string>>(patient.AllergiesJson) ?? new List<string>();
+        }
+        catch
+        {
+            allergies = new List<string>();
+        }
 
         return new PatientDto
         {
@@ -222,7 +228,7 @@ public class PatientsController : ControllerBase
         };
     }
 
-    private Patient MapFromDto(PatientDto dto)
+    private static Patient MapFromDto(PatientDto dto)
     {
         var allergiesJson = JsonSerializer.Serialize(dto.Allergies ?? new List<string>());
 
@@ -234,23 +240,23 @@ public class PatientsController : ControllerBase
             Gender = dto.Gender,
             Condition = dto.Condition,
             Status = dto.Status,
-            LastVisit = DateTime.Parse(dto.LastVisit),
-            AdmissionDate = dto.AdmissionDate != null ? DateTime.Parse(dto.AdmissionDate) : null,
-            DischargeDate = dto.DischargeDate != null ? DateTime.Parse(dto.DischargeDate) : null,
-            TreatmentStartDate = dto.TreatmentStartDate != null ? DateTime.Parse(dto.TreatmentStartDate) : null,
+            LastVisit = DateTime.TryParse(dto.LastVisit, out var lv) ? lv : DateTime.UtcNow,
+            AdmissionDate = TryParse(dto.AdmissionDate),
+            DischargeDate = TryParse(dto.DischargeDate),
+            TreatmentStartDate = TryParse(dto.TreatmentStartDate),
             IsCurrentPatient = dto.IsCurrentPatient,
             TreatmentNotes = dto.TreatmentNotes,
-            ContactPhone = dto.ContactInfo.Phone,
-            ContactEmail = dto.ContactInfo.Email,
-            ContactAddress = dto.ContactInfo.Address,
-            EmergencyContactName = dto.EmergencyContact.Name,
-            EmergencyContactRelationship = dto.EmergencyContact.Relationship,
-            EmergencyContactPhone = dto.EmergencyContact.Phone,
-            AllergiesJson = allergiesJson
+            ContactPhone = dto.ContactInfo?.Phone ?? string.Empty,
+            ContactEmail = dto.ContactInfo?.Email ?? string.Empty,
+            ContactAddress = dto.ContactInfo?.Address ?? string.Empty,
+            EmergencyContactName = dto.EmergencyContact?.Name ?? string.Empty,
+            EmergencyContactRelationship = dto.EmergencyContact?.Relationship ?? string.Empty,
+            EmergencyContactPhone = dto.EmergencyContact?.Phone ?? string.Empty,
+            AllergiesJson = allergiesJson,
         };
     }
 
-    private void UpdatePatientFromDto(Patient patient, PatientDto dto)
+    private static void UpdatePatientFromDto(Patient patient, PatientDto dto)
     {
         var allergiesJson = JsonSerializer.Serialize(dto.Allergies ?? new List<string>());
 
@@ -259,19 +265,21 @@ public class PatientsController : ControllerBase
         patient.Gender = dto.Gender;
         patient.Condition = dto.Condition;
         patient.Status = dto.Status;
-        patient.LastVisit = DateTime.Parse(dto.LastVisit);
-        patient.AdmissionDate = dto.AdmissionDate != null ? DateTime.Parse(dto.AdmissionDate) : null;
-        patient.DischargeDate = dto.DischargeDate != null ? DateTime.Parse(dto.DischargeDate) : null;
-        patient.TreatmentStartDate = dto.TreatmentStartDate != null ? DateTime.Parse(dto.TreatmentStartDate) : null;
+        if (DateTime.TryParse(dto.LastVisit, out var lv)) patient.LastVisit = lv;
+        patient.AdmissionDate = TryParse(dto.AdmissionDate);
+        patient.DischargeDate = TryParse(dto.DischargeDate);
+        patient.TreatmentStartDate = TryParse(dto.TreatmentStartDate);
         patient.IsCurrentPatient = dto.IsCurrentPatient;
         patient.TreatmentNotes = dto.TreatmentNotes;
-        patient.ContactPhone = dto.ContactInfo.Phone;
-        patient.ContactEmail = dto.ContactInfo.Email;
-        patient.ContactAddress = dto.ContactInfo.Address;
-        patient.EmergencyContactName = dto.EmergencyContact.Name;
-        patient.EmergencyContactRelationship = dto.EmergencyContact.Relationship;
-        patient.EmergencyContactPhone = dto.EmergencyContact.Phone;
+        patient.ContactPhone = dto.ContactInfo?.Phone ?? string.Empty;
+        patient.ContactEmail = dto.ContactInfo?.Email ?? string.Empty;
+        patient.ContactAddress = dto.ContactInfo?.Address ?? string.Empty;
+        patient.EmergencyContactName = dto.EmergencyContact?.Name ?? string.Empty;
+        patient.EmergencyContactRelationship = dto.EmergencyContact?.Relationship ?? string.Empty;
+        patient.EmergencyContactPhone = dto.EmergencyContact?.Phone ?? string.Empty;
         patient.AllergiesJson = allergiesJson;
     }
-}
 
+    private static DateTime? TryParse(string? s)
+        => DateTime.TryParse(s, out var d) ? d : null;
+}

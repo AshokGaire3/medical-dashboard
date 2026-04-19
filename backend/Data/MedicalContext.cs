@@ -1,6 +1,5 @@
 using MedicalDashboard.Api.Models;
 using Microsoft.EntityFrameworkCore;
-using System.Text.Json;
 
 namespace MedicalDashboard.Api.Data;
 
@@ -16,12 +15,12 @@ public class MedicalContext : DbContext
     public DbSet<Medication> Medications => Set<Medication>();
     public DbSet<TestResult> TestResults => Set<TestResult>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<Appointment> Appointments => Set<Appointment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        // Configure Patient relationships
         modelBuilder.Entity<Patient>()
             .HasMany(p => p.Vitals)
             .WithOne(v => v.Patient)
@@ -46,18 +45,25 @@ public class MedicalContext : DbContext
             .HasForeignKey(tr => tr.PatientId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Configure indexes for better query performance
         modelBuilder.Entity<Patient>()
-            .HasIndex(p => p.Status);
+            .HasMany(p => p.Appointments)
+            .WithOne(a => a.Patient)
+            .HasForeignKey(a => a.PatientId)
+            .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<Patient>()
-            .HasIndex(p => p.IsCurrentPatient);
+        modelBuilder.Entity<Patient>().HasIndex(p => p.Status);
+        modelBuilder.Entity<Patient>().HasIndex(p => p.IsCurrentPatient);
+        modelBuilder.Entity<Patient>().HasIndex(p => p.Name);
 
-        modelBuilder.Entity<Vital>()
-            .HasIndex(v => v.PatientId);
+        modelBuilder.Entity<Vital>().HasIndex(v => v.PatientId);
+        modelBuilder.Entity<Vital>().HasIndex(v => v.Timestamp);
 
-        modelBuilder.Entity<Vital>()
-            .HasIndex(v => v.Timestamp);
+        modelBuilder.Entity<Appointment>().HasIndex(a => a.PatientId);
+        modelBuilder.Entity<Appointment>().HasIndex(a => a.ScheduledAt);
+        modelBuilder.Entity<Appointment>().HasIndex(a => a.Status);
+
+        modelBuilder.Entity<User>()
+            .HasIndex(u => u.Email)
+            .IsUnique();
     }
 }
-

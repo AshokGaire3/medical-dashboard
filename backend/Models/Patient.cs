@@ -28,10 +28,14 @@ public class Patient
     // Allergies (stored as JSON array)
     public string AllergiesJson { get; set; } = "[]";
 
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? UpdatedAt { get; set; }
+
     // Navigation Properties
     public ICollection<Vital> Vitals { get; set; } = new List<Vital>();
     public ICollection<MedicalCondition> MedicalHistory { get; set; } = new List<MedicalCondition>();
     public ICollection<Medication> Medications { get; set; } = new List<Medication>();
     public ICollection<TestResult> TestResults { get; set; } = new List<TestResult>();
+    public ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
 }
 
