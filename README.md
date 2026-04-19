@@ -1,109 +1,81 @@
-# Medical Dashboard - Full Stack Application
+# Medical Dashboard
 
-A modern medical dashboard built with React (frontend) and ASP.NET Core (backend) for healthcare professionals to manage patients and view analytics.
+A modern, opinionated full-stack medical dashboard built with **React 18 + TypeScript** on the frontend and **ASP.NET Core 8** on the backend. It ships with JWT auth, role-based authorization, appointments, patient CRUD with search/pagination, realtime-ish dashboards, dark mode, and exportable reports.
 
-## Project Structure
+## Highlights
 
-This is a monorepo containing all components of the Medical Dashboard:
+- **Auth**: JWT login/register, protected routes, seeded demo accounts
+- **Patients**: search, filter, paginate, CRUD via modals with validation
+- **Appointments**: schedule, complete, cancel, filter by status
+- **Dashboard**: metrics, vitals trends, critical alerts, today’s schedule
+- **Analytics**: demographics, condition breakdowns, status distribution
+- **Reports**: CSV / JSON export
+- **DX**: TanStack Query, toast notifications, typed API client, RFC 7807 error handling, Swagger + JWT
+- **DB flexibility**: SQLite by default, SQL Server via connection string
+- **Theme**: light / dark / system
+- **Docs**: everything lives in [`docs/`](./docs/README.md), including an [AGENTS.md](./docs/AGENTS.md) for AI assistants
 
-```
-medical-dashboard/
-├── frontend/          # React + TypeScript frontend application
-├── backend/           # ASP.NET Core Web API
-├── database/          # Database scripts and migrations
-└── README.md          # This file
-```
+## Quick start (zero-config, SQLite)
 
-## Tech Stack
+Requires Node 20+ and .NET 8 SDK.
 
-### Frontend
-- React 18 + TypeScript
-- Vite (build tool)
-- Tailwind CSS
-- Recharts (data visualization)
-- React Router
-
-### Backend
-- ASP.NET Core 8 Web API
-- Entity Framework Core
-- SQL Server
-- C#
-
-## Quick Start
-
-### Prerequisites
-- Node.js 18+ and npm
-- .NET 8 SDK
-- SQL Server (LocalDB, Express, or Full Edition)
-
-### Setup
-
-1. **Backend Setup**
-   ```bash
-   cd backend
-   dotnet tool install --global dotnet-ef
-   dotnet ef migrations add InitialCreate
-   dotnet ef database update
-   dotnet run
-   ```
-   API runs on: `http://localhost:5000` or `https://localhost:5001`
-
-2. **Frontend Setup**
-   ```bash
-   cd frontend
-   npm install
-   # Create .env file with: VITE_API_URL=http://localhost:5000/api
-   npm run dev
-   ```
-   Frontend runs on: `http://localhost:5173`
-
-## Detailed Setup
-
-See [SETUP.md](./frontend/SETUP.md) for complete setup instructions.
-
-## Features
-
-- **Dashboard**: Overview with key medical metrics and charts
-- **Patient Management**: Full CRUD operations for patient records
-- **Analytics**: Interactive charts and data visualization
-- **Vitals Tracking**: Monitor patient vital signs
-- **Real-time Data**: Connected to SQL Server database
-
-## Development
-
-### Running Both Services
-
-**Terminal 1 - Backend:**
 ```bash
+# Backend (http://localhost:5000)
 cd backend
+dotnet restore
 dotnet run
-```
 
-**Terminal 2 - Frontend:**
-```bash
-cd frontend
+# Frontend (http://localhost:5173)
+cd ../frontend
+cp .env.example .env
+npm install
 npm run dev
 ```
 
-## API Endpoints
+Open <http://localhost:5173> and log in with a seeded account:
 
-- `GET /api/patients` - Get all patients
-- `GET /api/patients/{id}` - Get patient by ID
-- `POST /api/patients` - Create patient
-- `PUT /api/patients/{id}` - Update patient
-- `DELETE /api/patients/{id}` - Delete patient
-- `GET /api/vitals` - Get all vitals
-- `GET /api/dashboard/metrics` - Get dashboard metrics
+| Email | Password | Role |
+| --- | --- | --- |
+| `doctor@meddash.local` | `Password123!` | Doctor |
+| `nurse@meddash.local` | `Password123!` | Nurse |
+| `admin@meddash.local` | `Password123!` | Admin |
 
-See backend README for complete API documentation.
+## Docker
 
-## Project Organization
+```bash
+docker compose up --build
+```
 
-- **frontend/**: React application with components, pages, and API integration
-- **backend/**: ASP.NET Core API with controllers, services, models, and migrations
-- **database/**: Database scripts, migrations backup, and seeding scripts
+This brings up SQL Server, the API (http://localhost:5000), and the web app (http://localhost:5173).
+
+## Project layout
+
+```
+.
+├── backend/          # ASP.NET Core 8 Web API (C#)
+├── frontend/         # React 18 + Vite + Tailwind + TanStack Query
+├── database/         # Seed scripts
+├── docs/             # Architecture, API, setup, conventions, AGENTS.md
+├── .github/          # CI workflow
+└── docker-compose.yml
+```
+
+## Scripts cheat sheet
+
+Backend:
+- `dotnet run` — start API (auto-creates DB + seeds on first run)
+- `dotnet build -c Release` — compile
+
+Frontend:
+- `npm run dev` — Vite dev server
+- `npm run lint` — ESLint
+- `npm run typecheck` — `tsc --noEmit`
+- `npm run build` — production build
+
+## Documentation
+
+Start with [`docs/README.md`](./docs/README.md). For AI agents working in this repo, start with [`docs/AGENTS.md`](./docs/AGENTS.md).
 
 ## License
 
-This is a demo project. For production use in healthcare, ensure compliance with relevant regulations (HIPAA, etc.).
-
+MIT.
