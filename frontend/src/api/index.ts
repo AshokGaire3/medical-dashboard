@@ -1,6 +1,9 @@
-// Centralized API exports
+export { api, ApiError, onAuthEvent } from './client';
+export { API_BASE_URL, TOKEN_STORAGE_KEY, USER_STORAGE_KEY } from './config';
+export { authApi } from './auth';
 export { patientsApi } from './patients';
 export { vitalsApi } from './vitals';
+export { appointmentsApi } from './appointments';
+export type { AppointmentsQuery } from './appointments';
 export { dashboardApi } from './dashboard';
-export { apiConfig } from './config';
-
+export { reportsApi } from './reports';

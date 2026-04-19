@@ -1,12 +1,11 @@
-import { DashboardMetrics } from '../types';
-import { apiConfig, apiFetch } from './config';
-
-const API_URL = `${apiConfig.baseURL}/dashboard`;
+import { api } from './client';
+import type { DashboardAlert, DashboardMetrics, VitalsTrendPoint } from '../types';
 
 export const dashboardApi = {
-  // Get dashboard metrics
-  getMetrics: async (): Promise<DashboardMetrics> => {
-    return apiFetch<DashboardMetrics>(`${API_URL}/metrics`);
-  },
+  metrics: () => api.get<DashboardMetrics>('/dashboard/metrics'),
+  vitalsTrend: (days = 7, patientId?: number) =>
+    api.get<VitalsTrendPoint[]>('/dashboard/vitals-trend', {
+      params: { days, patientId },
+    }),
+  alerts: () => api.get<DashboardAlert[]>('/dashboard/alerts'),
 };
-

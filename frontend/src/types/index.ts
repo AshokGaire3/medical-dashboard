@@ -1,36 +1,72 @@
+// Types mirror the backend DTOs in backend/Models/DTOs/*.cs.
+// Keep this file in sync when either side changes.
+
+export type Gender = 'Male' | 'Female' | 'Other';
+
+export type PatientStatus =
+  | 'Stable'
+  | 'Critical'
+  | 'Improving'
+  | 'Monitoring'
+  | 'Recovery'
+  | 'Discharged'
+  | 'Recovered';
+
+export type ConditionSeverity = 'Mild' | 'Moderate' | 'Severe';
+export type ConditionStatus = 'Active' | 'Resolved' | 'Chronic';
+
+export type MedicationStatus = 'Active' | 'Discontinued' | 'Completed';
+
+export type TestType =
+  | 'Blood Test'
+  | 'Imaging'
+  | 'Biopsy'
+  | 'Cardiac'
+  | 'Pulmonary'
+  | 'Other';
+export type TestStatus = 'Normal' | 'Abnormal' | 'Critical';
+
+export type AppointmentStatus = 'Scheduled' | 'Completed' | 'Cancelled' | 'NoShow';
+
+export type UserRole = 'Doctor' | 'Nurse' | 'Admin';
+
+export interface ContactInfo {
+  phone: string;
+  email: string;
+  address: string;
+}
+
+export interface EmergencyContact {
+  name: string;
+  relationship: string;
+  phone: string;
+}
+
 export interface Patient {
-  id: string;
+  id: number;
   name: string;
   age: number;
-  gender: 'Male' | 'Female' | 'Other';
+  gender: Gender;
   condition: string;
-  status: 'Stable' | 'Critical' | 'Improving' | 'Monitoring' | 'Recovery' | 'Discharged' | 'Recovered';
+  status: PatientStatus;
   lastVisit: string;
-  admissionDate?: string;
-  dischargeDate?: string;
-  treatmentStartDate?: string;
-  contactInfo: {
-    phone: string;
-    email: string;
-    address: string;
-  };
+  admissionDate?: string | null;
+  dischargeDate?: string | null;
+  treatmentStartDate?: string | null;
+  contactInfo: ContactInfo;
   vitals: Vital[];
   medicalHistory: MedicalCondition[];
   medications: Medication[];
   testResults: TestResult[];
   allergies: string[];
-  emergencyContact: {
-    name: string;
-    relationship: string;
-    phone: string;
-  };
-  isCurrentPatient: boolean; // Whether patient is currently under treatment
-  treatmentNotes?: string;
+  emergencyContact: EmergencyContact;
+  isCurrentPatient: boolean;
+  treatmentNotes?: string | null;
 }
 
 export interface Vital {
-  id: string;
-  patientId: string;
+  id: number;
+  patientId: number;
   timestamp: string;
   heartRate: number;
   bloodPressureSystemic: number;
@@ -41,45 +77,74 @@ export interface Vital {
 }
 
 export interface MedicalCondition {
-  id: string;
+  id: number;
   condition: string;
   diagnosedDate: string;
-  severity: 'Mild' | 'Moderate' | 'Severe';
-  status: 'Active' | 'Resolved' | 'Chronic';
+  severity: ConditionSeverity;
+  status: ConditionStatus;
   notes: string;
 }
 
 export interface Medication {
-  id: string;
+  id: number;
   name: string;
   dosage: string;
   frequency: string;
   startDate: string;
-  endDate?: string;
+  endDate?: string | null;
   prescribedBy: string;
-  status: 'Active' | 'Discontinued' | 'Completed';
-  notes?: string;
+  status: MedicationStatus;
+  notes?: string | null;
 }
 
 export interface TestResult {
-  id: string;
+  id: number;
   testName: string;
-  testType: 'Blood Test' | 'Imaging' | 'Biopsy' | 'Cardiac' | 'Pulmonary' | 'Other';
+  testType: TestType;
   date: string;
   result: string;
-  normalRange?: string;
-  status: 'Normal' | 'Abnormal' | 'Critical';
+  normalRange?: string | null;
+  status: TestStatus;
   orderedBy: string;
-  notes?: string;
+  notes?: string | null;
 }
 
-export interface User {
-  id: string;
+export interface Appointment {
+  id: number;
+  patientId: number;
+  patientName?: string | null;
+  scheduledAt: string;
+  durationMinutes: number;
+  reason: string;
+  status: AppointmentStatus;
+  notes?: string | null;
+}
+
+export interface AuthUser {
+  id: number;
   name: string;
   email: string;
-  role: 'Doctor' | 'Nurse' | 'Admin';
-  avatar?: string;
-  practiceStartDate?: string; // When the doctor started practicing
+  role: UserRole;
+  avatar?: string | null;
+  practiceStartDate?: string | null;
+}
+
+export interface AuthResponse {
+  token: string;
+  expiresAt: string;
+  user: AuthUser;
+}
+
+export interface LoginInput {
+  email: string;
+  password: string;
+}
+
+export interface RegisterInput {
+  name: string;
+  email: string;
+  password: string;
+  role?: UserRole;
 }
 
 export interface DashboardMetrics {
@@ -89,19 +154,59 @@ export interface DashboardMetrics {
   averageHeartRate: number;
   averageBloodPressure: string;
   commonConditions: { condition: string; count: number }[];
-  lifetimePatients: number; // Total patients ever treated
-  currentPatients: number; // Patients currently under treatment
-  recoveredPatients: number; // Successfully treated patients
-  dischargedPatients: number; // Patients who completed treatment
+  lifetimePatients: number;
+  currentPatients: number;
+  recoveredPatients: number;
+  dischargedPatients: number;
 }
 
+export interface VitalsTrendPoint {
+  date: string;
+  heartRate: number;
+  systolicBP: number;
+  diastolicBP: number;
+  temperature: number;
+  oxygenSat: number;
+  respiratoryRate: number;
+}
+
+export interface DashboardAlert {
+  patient: string;
+  patientId: number;
+  vital: string;
+  value: string;
+  severity: 'High' | 'Critical';
+  timestamp: string;
+}
+
+export interface PagedResult<T> {
+  items: T[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface PatientsQuery {
+  search?: string;
+  status?: PatientStatus | '';
+  isCurrent?: boolean;
+  page?: number;
+  pageSize?: number;
+  sortBy?: 'name' | 'lastVisit' | 'age';
+  sortDir?: 'asc' | 'desc';
+}
+
+// Kept for backwards compatibility with existing components that read them:
 export interface DoctorStats {
   totalPatientsTreated: number;
   currentPatients: number;
   patientsInRecovery: number;
   patientsDischarged: number;
   patientsRecovered: number;
-  averageTreatmentDuration: number; // in days
-  successRate: number; // percentage of successful treatments
+  averageTreatmentDuration: number;
+  successRate: number;
   yearsOfPractice: number;
 }
+
+export interface User extends AuthUser {}

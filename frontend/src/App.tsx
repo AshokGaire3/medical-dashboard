@@ -1,50 +1,75 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { useState } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import Sidebar from './components/Layout/Sidebar';
 import Header from './components/Layout/Header';
 import Dashboard from './pages/Dashboard';
 import Patients from './pages/Patients';
 import Analytics from './pages/Analytics';
 import Settings from './pages/Settings';
+import Appointments from './pages/Appointments';
+import Reports from './pages/Reports';
+import Profile from './pages/Profile';
+import LoginPage from './pages/Login';
+import RegisterPage from './pages/Register';
+import NotFound from './pages/NotFound';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
-function App() {
+const PAGE_TITLES: Record<string, { title: string; description: string }> = {
+  '/': { title: 'Dashboard', description: 'At-a-glance overview of today’s activity.' },
+  '/patients': { title: 'Patients', description: 'Manage current and historical patients.' },
+  '/appointments': { title: 'Appointments', description: 'Schedule and track patient visits.' },
+  '/analytics': { title: 'Analytics', description: 'Trends, insights, and visualizations.' },
+  '/reports': { title: 'Reports', description: 'Export patient and clinical data.' },
+  '/profile': { title: 'Profile', description: 'Your account and preferences.' },
+  '/settings': { title: 'Settings', description: 'Configure the application.' },
+};
+
+function Shell() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-
-  const getPageTitle = (pathname: string) => {
-    switch (pathname) {
-      case '/': return 'Dashboard Overview';
-      case '/patients': return 'Patient Management';
-      case '/analytics': return 'Analytics & Reports';
-      case '/settings': return 'Settings';
-      default: return 'Medical Dashboard';
-    }
+  const location = useLocation();
+  const meta = PAGE_TITLES[location.pathname] ?? {
+    title: 'Medical Dashboard',
+    description: '',
   };
 
-  const basePath = import.meta.env.VITE_BASE_PATH || '/';
-
   return (
-    <Router basename={basePath}>
-      <div className="flex min-h-screen bg-gray-50">
-        <Sidebar 
-          isCollapsed={sidebarCollapsed}
-          onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-        />
-        <div className="flex-1 flex flex-col">
-          <Header 
-            title={getPageTitle(window.location.pathname)} 
-          />
-          <main className="flex-1 overflow-auto">
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/patients" element={<Patients />} />
-              <Route path="/analytics" element={<Analytics />} />
-              <Route path="/settings" element={<Settings />} />
-            </Routes>
-          </main>
-        </div>
+    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-950">
+      <Sidebar
+        isCollapsed={sidebarCollapsed}
+        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+      />
+      <div className="flex-1 flex flex-col min-w-0">
+        <Header title={meta.title} subtitle={meta.description} />
+        <main className="flex-1 overflow-auto">
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/patients" element={<Patients />} />
+            <Route path="/appointments" element={<Appointments />} />
+            <Route path="/analytics" element={<Analytics />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </main>
       </div>
-    </Router>
+    </div>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route
+        path="/*"
+        element={
+          <ProtectedRoute>
+            <Shell />
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
+  );
+}
