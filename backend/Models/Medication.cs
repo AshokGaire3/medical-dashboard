@@ -12,6 +12,8 @@ public class Medication
     public string PrescribedBy { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty; // "Active", "Discontinued", "Completed"
     public string? Notes { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? UpdatedAt { get; set; }
 
     // Navigation Property
     public Patient Patient { get; set; } = null!;

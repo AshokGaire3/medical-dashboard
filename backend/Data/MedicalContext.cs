@@ -58,6 +58,14 @@ public class MedicalContext : DbContext
         modelBuilder.Entity<Vital>().HasIndex(v => v.PatientId);
         modelBuilder.Entity<Vital>().HasIndex(v => v.Timestamp);
 
+        modelBuilder.Entity<Medication>().HasIndex(m => m.PatientId);
+        modelBuilder.Entity<Medication>().HasIndex(m => m.Status);
+
+        modelBuilder.Entity<TestResult>().HasIndex(tr => tr.PatientId);
+        modelBuilder.Entity<TestResult>().HasIndex(tr => tr.Date);
+
+        modelBuilder.Entity<MedicalCondition>().HasIndex(mc => mc.PatientId);
+
         modelBuilder.Entity<Appointment>().HasIndex(a => a.PatientId);
         modelBuilder.Entity<Appointment>().HasIndex(a => a.ScheduledAt);
         modelBuilder.Entity<Appointment>().HasIndex(a => a.Status);

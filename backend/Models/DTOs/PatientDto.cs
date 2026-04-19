@@ -43,21 +43,27 @@ public class VitalDto
     public double Temperature { get; set; }
     public int OxygenSaturation { get; set; }
     public int RespiratoryRate { get; set; }
+    public string? CreatedAt { get; set; }
+    public string? UpdatedAt { get; set; }
 }
 
 public class MedicalConditionDto
 {
     public int Id { get; set; }
+    public int PatientId { get; set; }
     public string Condition { get; set; } = string.Empty;
     public string DiagnosedDate { get; set; } = string.Empty;
     public string Severity { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public string Notes { get; set; } = string.Empty;
+    public string? CreatedAt { get; set; }
+    public string? UpdatedAt { get; set; }
 }
 
 public class MedicationDto
 {
     public int Id { get; set; }
+    public int PatientId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Dosage { get; set; } = string.Empty;
     public string Frequency { get; set; } = string.Empty;
@@ -66,11 +72,14 @@ public class MedicationDto
     public string PrescribedBy { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public string? Notes { get; set; }
+    public string? CreatedAt { get; set; }
+    public string? UpdatedAt { get; set; }
 }
 
 public class TestResultDto
 {
     public int Id { get; set; }
+    public int PatientId { get; set; }
     public string TestName { get; set; } = string.Empty;
     public string TestType { get; set; } = string.Empty;
     public string Date { get; set; } = string.Empty;
@@ -79,6 +88,8 @@ public class TestResultDto
     public string Status { get; set; } = string.Empty;
     public string OrderedBy { get; set; } = string.Empty;
     public string? Notes { get; set; }
+    public string? CreatedAt { get; set; }
+    public string? UpdatedAt { get; set; }
 }
 
 public class EmergencyContactDto

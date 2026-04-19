@@ -12,6 +12,8 @@ public class TestResult
     public string Status { get; set; } = string.Empty; // "Normal", "Abnormal", "Critical"
     public string OrderedBy { get; set; } = string.Empty;
     public string? Notes { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? UpdatedAt { get; set; }
 
     // Navigation Property
     public Patient Patient { get; set; } = null!;

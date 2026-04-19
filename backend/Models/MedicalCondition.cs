@@ -9,6 +9,8 @@ public class MedicalCondition
     public string Severity { get; set; } = string.Empty; // "Mild", "Moderate", "Severe"
     public string Status { get; set; } = string.Empty; // "Active", "Resolved", "Chronic"
     public string Notes { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? UpdatedAt { get; set; }
 
     // Navigation Property
     public Patient Patient { get; set; } = null!;

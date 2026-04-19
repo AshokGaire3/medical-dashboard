@@ -85,7 +85,8 @@ public class VitalsController : ControllerBase
                 BloodPressureDiastolic = vitalDto.BloodPressureDiastolic,
                 Temperature = vitalDto.Temperature,
                 OxygenSaturation = vitalDto.OxygenSaturation,
-                RespiratoryRate = vitalDto.RespiratoryRate
+                RespiratoryRate = vitalDto.RespiratoryRate,
+                CreatedAt = DateTime.UtcNow
             };
 
             _context.Vitals.Add(vital);
@@ -126,6 +127,7 @@ public class VitalsController : ControllerBase
             vital.Temperature = vitalDto.Temperature;
             vital.OxygenSaturation = vitalDto.OxygenSaturation;
             vital.RespiratoryRate = vitalDto.RespiratoryRate;
+            vital.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
 
@@ -140,6 +142,7 @@ public class VitalsController : ControllerBase
 
     // DELETE: api/vitals/5
     [HttpDelete("{id}")]
+    [Authorize(Roles = "Doctor,Admin")]
     public async Task<IActionResult> DeleteVital(int id)
     {
         try
@@ -174,7 +177,9 @@ public class VitalsController : ControllerBase
             BloodPressureDiastolic = vital.BloodPressureDiastolic,
             Temperature = vital.Temperature,
             OxygenSaturation = vital.OxygenSaturation,
-            RespiratoryRate = vital.RespiratoryRate
+            RespiratoryRate = vital.RespiratoryRate,
+            CreatedAt = vital.CreatedAt.ToString("yyyy-MM-ddTHH:mm:ss"),
+            UpdatedAt = vital.UpdatedAt?.ToString("yyyy-MM-ddTHH:mm:ss")
         };
     }
 }

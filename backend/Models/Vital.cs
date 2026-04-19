@@ -11,6 +11,8 @@ public class Vital
     public double Temperature { get; set; }
     public int OxygenSaturation { get; set; }
     public int RespiratoryRate { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? UpdatedAt { get; set; }
 
     // Navigation Property
     public Patient Patient { get; set; } = null!;

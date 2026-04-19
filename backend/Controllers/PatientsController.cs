@@ -195,6 +195,7 @@ public class PatientsController : ControllerBase
             MedicalHistory = patient.MedicalHistory.Select(mc => new MedicalConditionDto
             {
                 Id = mc.Id,
+                PatientId = mc.PatientId,
                 Condition = mc.Condition,
                 DiagnosedDate = mc.DiagnosedDate.ToString("yyyy-MM-dd"),
                 Severity = mc.Severity,
@@ -204,6 +205,7 @@ public class PatientsController : ControllerBase
             Medications = patient.Medications.Select(m => new MedicationDto
             {
                 Id = m.Id,
+                PatientId = m.PatientId,
                 Name = m.Name,
                 Dosage = m.Dosage,
                 Frequency = m.Frequency,
@@ -216,6 +218,7 @@ public class PatientsController : ControllerBase
             TestResults = patient.TestResults.Select(tr => new TestResultDto
             {
                 Id = tr.Id,
+                PatientId = tr.PatientId,
                 TestName = tr.TestName,
                 TestType = tr.TestType,
                 Date = tr.Date.ToString("yyyy-MM-dd"),
