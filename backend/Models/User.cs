@@ -5,8 +5,10 @@ public class User
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
-    public string Role { get; set; } = string.Empty; // "Doctor", "Nurse", "Admin"
+    public string PasswordHash { get; set; } = string.Empty;
+    public string Role { get; set; } = "Doctor"; // "Doctor", "Nurse", "Admin"
     public string? Avatar { get; set; }
     public DateTime? PracticeStartDate { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? LastLoginAt { get; set; }
 }
-
