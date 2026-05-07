@@ -97,14 +97,14 @@ export default function Reports() {
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+    <div className="bg-themeWhite dark:bg-themeBlack border-2 border-themeBlack dark:border-themeWhite p-4">
       <div className="flex items-center gap-3">
-        <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300">
+        <div className="p-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300">
           <Users className="w-5 h-5" />
         </div>
         <div>
-          <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
-          <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{value}</p>
+          <p className="text-xs text-themeBlack/60 dark:text-themeWhite/60">{label}</p>
+          <p className="text-xl font-bold text-themeBlack dark:text-themeWhite">{value}</p>
         </div>
       </div>
     </div>
@@ -123,14 +123,14 @@ function ReportCard({
   action: React.ReactNode;
 }) {
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+    <div className="bg-themeWhite dark:bg-themeBlack border-2 border-themeBlack dark:border-themeWhite p-6">
       <div className="flex items-start gap-4">
-        <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300">
+        <div className="p-3 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300">
           {icon}
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{description}</p>
+          <h3 className="text-base font-semibold text-themeBlack dark:text-themeWhite">{title}</h3>
+          <p className="text-sm text-themeBlack/60 dark:text-themeWhite/60 mt-1">{description}</p>
           <div className="mt-4">{action}</div>
         </div>
       </div>

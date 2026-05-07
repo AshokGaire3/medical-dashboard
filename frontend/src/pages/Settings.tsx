@@ -10,8 +10,8 @@ export default function Settings() {
     <div className="p-6 max-w-3xl">
       <PageHeader title="Settings" description="Preferences and configuration." />
 
-      <section className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Appearance</h3>
+      <section className="bg-themeWhite dark:bg-themeBlack border-2 border-themeBlack dark:border-themeWhite p-6">
+        <h3 className="text-lg font-semibold text-themeBlack dark:text-themeWhite mb-4">Appearance</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <ThemeOption
             active={theme === 'light'}
@@ -38,8 +38,8 @@ export default function Settings() {
         </div>
       </section>
 
-      <section className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 mt-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Environment</h3>
+      <section className="bg-themeWhite dark:bg-themeBlack border-2 border-themeBlack dark:border-themeWhite p-6 mt-6">
+        <h3 className="text-lg font-semibold text-themeBlack dark:text-themeWhite mb-4">Environment</h3>
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Info label="API base URL" value={API_BASE_URL || '(unset)'} />
           <Info label="Build mode" value={import.meta.env.MODE} />
@@ -63,10 +63,10 @@ function ThemeOption({
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-3 px-4 py-3 rounded-lg border transition-colors ${
+      className={`flex items-center gap-3 px-4 py-3 border transition-colors ${
         active
           ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
-          : 'border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+          : 'border-themeBlack dark:border-themeWhite text-themeBlack dark:text-themeWhite hover:bg-gray-50 dark:hover:bg-gray-800'
       }`}
     >
       {icon}
@@ -77,9 +77,9 @@ function ThemeOption({
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <div className="p-3 rounded-lg border border-gray-200 dark:border-gray-800">
-      <dt className="text-xs text-gray-500 dark:text-gray-400">{label}</dt>
-      <dd className="mt-1 text-sm font-mono text-gray-900 dark:text-gray-100 break-all">{value}</dd>
+    <div className="p-3 border-2 border-themeBlack shadow-brutal dark:shadow-brutal-sm dark:border-themeWhite">
+      <dt className="text-xs text-themeBlack/60 dark:text-themeWhite/60">{label}</dt>
+      <dd className="mt-1 text-sm font-mono text-themeBlack dark:text-themeWhite break-all">{value}</dd>
     </div>
   );
 }

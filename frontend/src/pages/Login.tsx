@@ -57,17 +57,17 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 p-4">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-2 mb-6">
-          <div className="p-2 rounded-xl bg-blue-600 text-white">
+          <div className="p-2 bg-accentBlue text-white">
             <Activity className="w-6 h-6" />
           </div>
-          <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">MedDash</span>
+          <span className="text-2xl font-bold text-themeBlack dark:text-themeWhite">MedDash</span>
         </div>
 
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm p-8">
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+        <div className="bg-themeWhite dark:bg-themeBlack border-2 border-themeBlack dark:border-themeWhite shadow-sm p-8">
+          <h1 className="text-xl font-semibold text-themeBlack dark:text-themeWhite">
             Welcome back
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-sm text-themeBlack/60 dark:text-themeWhite/60 mt-1">
             Sign in to your Medical Dashboard account.
           </p>
 
@@ -95,7 +95,7 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-5 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-xs text-blue-700 dark:text-blue-300">
+          <div className="mt-5 p-3 bg-blue-50 dark:bg-blue-900/20 text-xs text-blue-700 dark:text-blue-300">
             <p className="font-semibold mb-1">Demo accounts</p>
             <div className="space-y-1">
               {[
@@ -115,7 +115,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <p className="mt-6 text-sm text-center text-gray-500 dark:text-gray-400">
+          <p className="mt-6 text-sm text-center text-themeBlack/60 dark:text-themeWhite/60">
             Don't have an account?{' '}
             <Link to="/register" className="text-blue-600 hover:underline">
               Create one

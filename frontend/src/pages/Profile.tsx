@@ -11,7 +11,7 @@ export default function Profile() {
     <div className="p-6 max-w-3xl">
       <PageHeader title="Profile" description="Your account details." />
 
-      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+      <div className="bg-themeWhite dark:bg-themeBlack border-2 border-themeBlack dark:border-themeWhite p-6">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
             <span className="text-blue-700 dark:text-blue-300 text-xl font-semibold">
@@ -24,8 +24,8 @@ export default function Profile() {
             </span>
           </div>
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{user.name}</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
+            <h2 className="text-xl font-semibold text-themeBlack dark:text-themeWhite">{user.name}</h2>
+            <p className="text-sm text-themeBlack/60 dark:text-themeWhite/60">{user.email}</p>
           </div>
         </div>
 
@@ -35,7 +35,7 @@ export default function Profile() {
           <InfoRow icon={<Shield className="w-4 h-4" />} label="Role" value={user.role} />
         </div>
 
-        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-800">
+        <div className="mt-6 pt-6 border-t border-themeBlack dark:border-themeWhite">
           <Button variant="danger" leftIcon={<LogOut className="w-4 h-4" />} onClick={logout}>
             Sign out
           </Button>
@@ -55,12 +55,12 @@ function InfoRow({
   value: string;
 }) {
   return (
-    <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-800">
-      <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+    <div className="p-4 border-2 border-themeBlack shadow-brutal dark:shadow-brutal-sm dark:border-themeWhite">
+      <div className="flex items-center gap-2 text-xs text-themeBlack/60 dark:text-themeWhite/60">
         {icon}
         {label}
       </div>
-      <p className="mt-1 text-sm font-medium text-gray-900 dark:text-gray-100 break-all">{value}</p>
+      <p className="mt-1 text-sm font-medium text-themeBlack dark:text-themeWhite break-all">{value}</p>
     </div>
   );
 }

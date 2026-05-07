@@ -196,7 +196,7 @@ export function PatientFormModal({ open, onClose, patient }: Props) {
         <Input label="Emergency phone" {...register('emergencyPhone')} />
         <Input label="Allergies (comma separated)" {...register('allergies')} />
 
-        <label className="md:col-span-2 flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+        <label className="md:col-span-2 flex items-center gap-2 text-sm text-themeBlack dark:text-themeWhite">
           <input
             type="checkbox"
             {...register('isCurrentPatient')}
