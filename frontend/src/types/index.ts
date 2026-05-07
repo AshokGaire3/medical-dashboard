@@ -24,7 +24,7 @@ export type TestType =
   | 'Cardiac'
   | 'Pulmonary'
   | 'Other';
-export type TestStatus = 'Normal' | 'Abnormal' | 'Critical';
+export type TestStatus = 'Normal' | 'Abnormal' | 'Critical' | 'Pending';
 
 export type AppointmentStatus = 'Scheduled' | 'Completed' | 'Cancelled' | 'NoShow';
 
@@ -64,7 +64,12 @@ export interface Patient {
   treatmentNotes?: string | null;
 }
 
-export interface Vital {
+export interface AuditFields {
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface Vital extends AuditFields {
   id: number;
   patientId: number;
   timestamp: string;
@@ -76,8 +81,9 @@ export interface Vital {
   respiratoryRate: number;
 }
 
-export interface MedicalCondition {
+export interface MedicalCondition extends AuditFields {
   id: number;
+  patientId: number;
   condition: string;
   diagnosedDate: string;
   severity: ConditionSeverity;
@@ -85,8 +91,9 @@ export interface MedicalCondition {
   notes: string;
 }
 
-export interface Medication {
+export interface Medication extends AuditFields {
   id: number;
+  patientId: number;
   name: string;
   dosage: string;
   frequency: string;
@@ -97,8 +104,9 @@ export interface Medication {
   notes?: string | null;
 }
 
-export interface TestResult {
+export interface TestResult extends AuditFields {
   id: number;
+  patientId: number;
   testName: string;
   testType: TestType;
   date: string;
@@ -197,6 +205,59 @@ export interface PatientsQuery {
   sortDir?: 'asc' | 'desc';
 }
 
+export interface VitalInput {
+  patientId: number;
+  timestamp: string;
+  heartRate: number;
+  bloodPressureSystemic: number;
+  bloodPressureDiastolic: number;
+  temperature: number;
+  oxygenSaturation: number;
+  respiratoryRate: number;
+}
+
+export interface MedicationInput {
+  patientId: number;
+  name: string;
+  dosage: string;
+  frequency: string;
+  startDate: string;
+  endDate?: string | null;
+  prescribedBy: string;
+  status: MedicationStatus;
+  notes?: string | null;
+}
+
+export interface TestResultInput {
+  patientId: number;
+  testName: string;
+  testType: TestType;
+  date: string;
+  result: string;
+  normalRange?: string | null;
+  status: TestStatus;
+  orderedBy: string;
+  notes?: string | null;
+}
+
+export interface MedicalConditionInput {
+  patientId: number;
+  condition: string;
+  diagnosedDate: string;
+  severity: ConditionSeverity;
+  status: ConditionStatus;
+  notes: string;
+}
+
+export interface AppointmentInput {
+  patientId: number;
+  scheduledAt: string;
+  durationMinutes: number;
+  reason: string;
+  status?: AppointmentStatus;
+  notes?: string | null;
+}
+
 // Kept for backwards compatibility with existing components that read them:
 export interface DoctorStats {
   totalPatientsTreated: number;
@@ -210,3 +271,22 @@ export interface DoctorStats {
 }
 
 export interface User extends AuthUser {}
+
+export type HealthScoreBand = 'Low' | 'LowMedium' | 'Medium' | 'High';
+
+export interface HealthScoreComponent {
+  parameter: string;
+  value: string;
+  points: number;
+}
+
+export interface HealthScore {
+  total: number;
+  band: HealthScoreBand;
+  bandLabel: string;
+  recommendation: string;
+  computedAt: string;
+  vitalId: number;
+  vitalTimestamp: string;
+  components: HealthScoreComponent[];
+}

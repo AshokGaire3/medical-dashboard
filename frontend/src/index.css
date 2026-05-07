@@ -1,3 +1,35 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-themeWhite text-themeBlack antialiased selection:bg-accentBlue selection:text-white dark:bg-themeBlack dark:text-themeWhite;
+  }
+}
+
+@media print {
+  html,
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  .print-page {
+    background: #ffffff !important;
+    color: #000000 !important;
+    max-width: 100% !important;
+    padding: 1rem !important;
+    margin: 0 !important;
+  }
+  .no-print,
+  nav,
+  aside,
+  header.app-header {
+    display: none !important;
+  }
+  @page {
+    margin: 1.5cm;
+  }
+}

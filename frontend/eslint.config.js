@@ -33,7 +33,10 @@ export default [
       // Basic rules
       'no-console': 'warn',
       'prefer-const': 'warn',
-      'no-unused-vars': 'warn',
+      'no-unused-vars': [
+        'warn',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+      ],
     },
   }
 ];
