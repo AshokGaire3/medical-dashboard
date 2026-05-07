@@ -184,6 +184,12 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // --- Pipeline --------------------------------------------------------------
+// CORS must be first so that every response — including error responses from
+// ExceptionHandlingMiddleware — carries the Access-Control-Allow-Origin header.
+// Without this, browser preflights that hit an exception get a bare 5xx with
+// no CORS headers, which the browser treats as a CORS failure.
+app.UseCors("AllowReact");
+
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 if (app.Environment.IsDevelopment())
@@ -191,8 +197,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
-app.UseCors("AllowReact");
 
 if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();

@@ -16,6 +16,22 @@ public static class DbSeeder
             return;
         }
 
+        // Fetch the seeded doctors so we can assign patients to them.
+        // This is required by the ScopedToCaller roster filter — a doctor
+        // only sees patients where AssignedDoctorId == their own user id.
+        var doctorIds = await context.Users
+            .Where(u => u.Role == "Doctor")
+            .OrderBy(u => u.Id)
+            .Select(u => u.Id)
+            .ToListAsync();
+
+        // Fetch the seeded nurses similarly.
+        var nurseIds = await context.Users
+            .Where(u => u.Role == "Nurse")
+            .OrderBy(u => u.Id)
+            .Select(u => u.Id)
+            .ToListAsync();
+
         // Create sample patients
         var patients = new List<Patient>
         {
@@ -421,6 +437,19 @@ public static class DbSeeder
         };
 
         patients.AddRange(BuildAdditionalPatients());
+
+        // Assign every patient to a doctor (and a nurse) round-robin so that
+        // the ScopedToCaller roster filter returns them when a non-admin logs in.
+        if (doctorIds.Count > 0 || nurseIds.Count > 0)
+        {
+            for (int i = 0; i < patients.Count; i++)
+            {
+                if (doctorIds.Count > 0)
+                    patients[i].AssignedDoctorId = doctorIds[i % doctorIds.Count];
+                if (nurseIds.Count > 0)
+                    patients[i].AssignedNurseId = nurseIds[i % nurseIds.Count];
+            }
+        }
 
         await context.Patients.AddRangeAsync(patients);
         await context.SaveChangesAsync();

@@ -3,13 +3,13 @@ import { useAuth } from '../../context/AuthContext';
 import type { UserRole } from '../../types';
 
 interface RequireRoleProps {
-  roles: UserRole | UserRole[];
-  children: ReactNode;
-  /**
-   * Optional fallback content to render when the current user does not
-   * match the required role(s). Defaults to rendering nothing.
-   */
-  fallback?: ReactNode;
+ roles: UserRole | UserRole[];
+ children: ReactNode;
+ /**
+ * Optional fallback content to render when the current user does not
+ * match the required role(s). Defaults to rendering nothing.
+ */
+ fallback?: ReactNode;
 }
 
 /**
@@ -20,6 +20,6 @@ interface RequireRoleProps {
  * component and pass a <Navigate /> fallback.
  */
 export function RequireRole({ roles, children, fallback = null }: RequireRoleProps) {
-  const { hasRole } = useAuth();
-  return <>{hasRole(roles) ? children : fallback}</>;
+ const { hasRole } = useAuth();
+ return <>{hasRole(roles) ? children : fallback}</>;
 }

@@ -11,11 +11,13 @@
 }
 
 @media print {
+
   html,
   body {
     background: #ffffff !important;
     color: #000000 !important;
   }
+
   .print-page {
     background: #ffffff !important;
     color: #000000 !important;
@@ -23,12 +25,14 @@
     padding: 1rem !important;
     margin: 0 !important;
   }
+
   .no-print,
   nav,
   aside,
   header.app-header {
     display: none !important;
   }
+
   @page {
     margin: 1.5cm;
   }
