@@ -17,7 +17,7 @@ const CustomPieChart: React.FC<PieChartProps> = ({ data, colors, title }) => {
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
-    return (
+    return percent > 0.05 ? (
       <text 
         x={x} 
         y={y} 
@@ -29,14 +29,14 @@ const CustomPieChart: React.FC<PieChartProps> = ({ data, colors, title }) => {
       >
         {`${(percent * 100).toFixed(0)}%`}
       </text>
-    );
+    ) : null;
   };
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0];
       return (
-        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+        <div className="bg-white p-3 border border-gray-200 shadow-lg">
           <p className="font-semibold text-gray-800">{data.name}</p>
           <p className="text-sm" style={{ color: data.color }}>
             Patients: {data.value}
@@ -60,8 +60,8 @@ const CustomPieChart: React.FC<PieChartProps> = ({ data, colors, title }) => {
   const dataWithTotal = data.map(item => ({ ...item, total }));
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6">
-      {title && <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">{title}</h3>}
+    <div className="bg-themeWhite dark:bg-themeBlack border-2 border-themeBlack dark:border-themeWhite p-6 shadow-brutal dark:shadow-brutal-sm">
+      {title && <h3 className="text-xl font-black text-themeBlack dark:text-themeWhite uppercase tracking-tight mb-6 border-b-2 border-themeBlack dark:border-themeWhite pb-4">{title}</h3>}
       <ResponsiveContainer width="100%" height={300}>
         <PieChart>
           <Pie

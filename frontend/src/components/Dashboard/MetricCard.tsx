@@ -10,17 +10,17 @@ interface MetricCardProps {
 }
 
 const colorClasses: Record<string, string> = {
-  blue: 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300',
-  green: 'bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-300',
-  red: 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-300',
-  yellow: 'bg-yellow-50 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-300',
-  purple: 'bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300',
+  blue: 'bg-accentBlue text-themeWhite border-2 border-themeBlack dark:border-themeWhite',
+  green: 'bg-accentGreen text-themeWhite border-2 border-themeBlack dark:border-themeWhite',
+  red: 'bg-themeBlack text-themeWhite dark:bg-themeWhite dark:text-themeBlack border-2 border-themeBlack dark:border-themeWhite',
+  yellow: 'bg-themeBlack text-themeWhite dark:bg-themeWhite dark:text-themeBlack border-2 border-themeBlack dark:border-themeWhite',
+  purple: 'bg-themeBlack text-themeWhite dark:bg-themeWhite dark:text-themeBlack border-2 border-themeBlack dark:border-themeWhite',
 };
 
 const changeClasses: Record<string, string> = {
-  positive: 'text-green-600 dark:text-green-400',
-  negative: 'text-red-600 dark:text-red-400',
-  neutral: 'text-gray-500 dark:text-gray-400',
+  positive: 'text-accentGreen font-bold',
+  negative: 'text-themeBlack dark:text-themeWhite font-bold',
+  neutral: 'text-themeBlack/60 dark:text-themeWhite/60 font-semibold',
 };
 
 export default function MetricCard({
@@ -32,19 +32,19 @@ export default function MetricCard({
   color = 'blue',
 }: MetricCardProps) {
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 hover:shadow-md transition-shadow">
+    <div className="bg-themeWhite dark:bg-themeBlack border-2 border-themeBlack dark:border-themeWhite p-6 hover:-translate-y-1 hover:shadow-brutal dark:hover:shadow-brutal-sm transition-all group">
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 truncate">
+          <p className="text-sm font-black tracking-widest text-themeBlack/70 dark:text-themeWhite/70 mb-2 uppercase truncate">
             {title}
           </p>
-          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100 truncate">{value}</p>
+          <p className="text-4xl font-black text-themeBlack dark:text-themeWhite truncate tracking-tighter">{value}</p>
           {change ? (
-            <p className={`text-sm mt-2 ${changeClasses[changeType]} truncate`}>{change}</p>
+            <p className={`text-sm mt-3 ${changeClasses[changeType]} truncate uppercase tracking-wider`}>{change}</p>
           ) : null}
         </div>
-        <div className={`p-3 rounded-lg shrink-0 ${colorClasses[color]}`}>
-          <Icon className="w-6 h-6" />
+        <div className={`p-3 shrink-0 transition-transform group-hover:scale-110 ${colorClasses[color]}`}>
+          <Icon strokeWidth={1.5} className="w-8 h-8" />
         </div>
       </div>
     </div>

@@ -23,7 +23,7 @@ const CustomBarChart: React.FC<BarChartProps> = ({
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+        <div className="bg-white p-3 border border-gray-200 shadow-lg">
           <p className="font-semibold text-gray-800">{label}</p>
           {payload.map((entry: any, index: number) => (
             <p key={index} className="text-sm" style={{ color: entry.color }}>
@@ -39,8 +39,8 @@ const CustomBarChart: React.FC<BarChartProps> = ({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6">
-      {title && <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">{title}</h3>}
+    <div className="bg-themeWhite dark:bg-themeBlack border-2 border-themeBlack dark:border-themeWhite p-6 shadow-brutal dark:shadow-brutal-sm">
+      {title && <h3 className="text-xl font-black text-themeBlack dark:text-themeWhite uppercase tracking-tight mb-6 border-b-2 border-themeBlack dark:border-themeWhite pb-4">{title}</h3>}
       <ResponsiveContainer width="100%" height={300}>
         <BarChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
