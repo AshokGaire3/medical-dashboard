@@ -28,12 +28,12 @@ import { useDebounce } from '../hooks/useDebounce';
 import { PATIENT_STATUSES } from '../utils/constants';
 import type { Patient, PatientStatus } from '../types';
 
-type TypeFilter = 'current' | 'historical' | 'all';
+type TypeFilter = 'all' | 'current' | 'recovered' | 'historical';
 
 export default function Patients() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<PatientStatus | ''>('');
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>('current');
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
   const [selected, setSelected] = useState<Patient | null>(null);
@@ -42,11 +42,19 @@ export default function Patients() {
   const [confirmDelete, setConfirmDelete] = useState<Patient | null>(null);
 
   const debouncedSearch = useDebounce(search, 300);
-  const isCurrent = typeFilter === 'all' ? undefined : typeFilter === 'current';
+
+  // Derive isCurrent and forced-status from the active tab
+  const isCurrent =
+    typeFilter === 'current' ? true
+    : typeFilter === 'historical' ? false
+    : undefined; // 'all' and 'recovered' don't filter by isCurrent
+
+  const forcedStatus: PatientStatus | undefined =
+    typeFilter === 'recovered' ? 'Recovered' : undefined;
 
   const query = usePatients({
     search: debouncedSearch || undefined,
-    status: statusFilter || undefined,
+    status: forcedStatus ?? (statusFilter || undefined),
     isCurrent,
     page,
     pageSize,
@@ -96,20 +104,26 @@ export default function Patients() {
 
       <div className="bg-themeWhite dark:bg-themeBlack border-2 border-themeBlack dark:border-themeWhite p-4 shadow-brutal dark:shadow-brutal-sm">
         <div className="flex gap-2 bg-themeBlack dark:bg-themeWhite p-2 w-full">
-          {(['current', 'historical', 'all'] as TypeFilter[]).map((t) => (
+          {([
+            { key: 'all',       label: 'All' },
+            { key: 'current',   label: 'Current' },
+            { key: 'recovered', label: '✓ Recovered' },
+            { key: 'historical',label: 'Historical' },
+          ] as { key: TypeFilter; label: string }[]).map(({ key, label }) => (
             <button
-              key={t}
+              key={key}
               onClick={() => {
-                setTypeFilter(t);
+                setTypeFilter(key);
+                setStatusFilter('');
                 setPage(1);
               }}
               className={`flex-1 py-2 px-4 text-sm font-bold capitalize transition-all border-2 border-transparent ${
-                typeFilter === t
+                typeFilter === key
                   ? 'bg-themeWhite text-themeBlack dark:bg-themeBlack dark:text-themeWhite border-themeBlack dark:border-themeWhite'
                   : 'text-themeWhite hover:text-themeWhite/80 dark:text-themeBlack dark:hover:text-themeBlack/80'
               }`}
             >
-              {t}
+              {label}
             </button>
           ))}
         </div>
@@ -130,11 +144,12 @@ export default function Patients() {
           </div>
           <div className="w-full md:w-64">
             <Select
-              value={statusFilter}
+              value={typeFilter === 'recovered' ? 'Recovered' : statusFilter}
               onChange={(e) => {
                 setStatusFilter(e.target.value as PatientStatus | '');
                 setPage(1);
               }}
+              disabled={typeFilter === 'recovered'}
               options={[
                 { value: '', label: 'ALL STATUSES' },
                 ...PATIENT_STATUSES.map((s) => ({ value: s, label: s.toUpperCase() })),

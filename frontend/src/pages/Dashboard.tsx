@@ -67,10 +67,15 @@ export default function Dashboard() {
   for (const p of patients) {
     conditionCounts[p.condition] = (conditionCounts[p.condition] ?? 0) + 1;
   }
-  const conditionDistribution = Object.entries(conditionCounts).map(([name, value]) => ({
-    name,
-    value,
-  }));
+  let conditionDistribution = Object.entries(conditionCounts)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value);
+
+  if (conditionDistribution.length > 5) {
+    const top5 = conditionDistribution.slice(0, 5);
+    const otherSum = conditionDistribution.slice(5).reduce((sum, c) => sum + c.value, 0);
+    conditionDistribution = [...top5, { name: 'Other', value: otherSum }];
+  }
 
   const ageBuckets = [
     { ageGroup: '0-17', min: 0, max: 17 },
