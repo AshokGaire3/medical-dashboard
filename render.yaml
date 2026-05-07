@@ -1,0 +1,30 @@
+# Render blueprint for the Medical Dashboard backend.
+# Push to main and Render auto-deploys via the existing Dockerfile.
+# Set the JWT__KEY env var (>= 32 chars) in the Render dashboard before the first deploy.
+services:
+  - type: web
+    name: meddash-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /api/health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ASPNETCORE_URLS
+        value: http://+:5000
+      - key: Jwt__Key
+        sync: false   # Set this manually in the Render dashboard.
+      - key: Jwt__Issuer
+        value: meddash
+      - key: Jwt__Audience
+        value: meddash-clients
+      - key: ConnectionStrings__DefaultConnection
+        value: Data Source=/var/data/meddash.db
+      - key: Cors__AllowedOrigins__0
+        sync: false   # Your Vercel frontend URL, e.g. https://meddash.vercel.app
+    disk:
+      name: meddash-data
+      mountPath: /var/data
+      sizeGB: 1
