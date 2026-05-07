@@ -10,6 +10,29 @@ and the *why*.
 
 ---
 
+## 2026-05-07 — AddPostgreSQLSupport
+
+Added PostgreSQL as a second production database provider for hosting on Render.
+
+**Changes**
+
+- Added `Npgsql.EntityFrameworkCore.PostgreSQL` NuGet package.
+- Added `MedicalDashboardContextFactory` (design-time factory) so `dotnet ef` commands
+  can run without a running app when targeting PostgreSQL.
+- Updated `Program.cs` provider auto-detection: connection strings containing `Host=`
+  now route to the Npgsql provider; `Data Source=` → SQLite; `Server=` → SQL Server.
+- `render.yaml` updated: removed SQLite disk, added a Render managed PostgreSQL database
+  and wired `DATABASE_URL` into the service environment.
+- `backend/Dockerfile` unchanged — the image works for both providers.
+
+**Why**
+
+Render's free tier doesn't support persistent disks on the free web service plan, making
+SQLite unreliable in production. The managed PostgreSQL database is free, persistent, and
+better suited for a deployed demo.
+
+---
+
 ## 2026-05-07 — InitialCreate
 
 First migration. Captures the schema after the database hardening pass that

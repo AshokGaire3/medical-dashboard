@@ -1,6 +1,6 @@
 # Medical Dashboard
 
-A modern, opinionated full-stack medical dashboard built with **React 18 + TypeScript** on the frontend and **ASP.NET Core 8** on the backend. It ships with JWT auth, role-based authorization, appointments, patient CRUD with search/pagination, realtime-ish dashboards, dark mode, and exportable reports.
+A modern, opinionated full-stack medical dashboard built with **React 18 + TypeScript** on the frontend and **ASP.NET Core 8** on the backend. It ships with JWT auth, role-based authorization, appointments, patient CRUD with search/pagination, real-time dashboards, and exportable reports. The UI uses a **Neo-Brutalist** design (Vanilla CSS, no Tailwind).
 
 ## Highlights
 
@@ -11,8 +11,8 @@ A modern, opinionated full-stack medical dashboard built with **React 18 + TypeS
 - **Analytics**: demographics, condition breakdowns, status distribution
 - **Reports**: CSV / JSON export
 - **DX**: TanStack Query, toast notifications, typed API client, RFC 7807 error handling, Swagger + JWT
-- **DB flexibility**: SQLite by default, SQL Server via connection string
-- **Theme**: light / dark / system
+- **DB flexibility**: SQLite (dev) / PostgreSQL (Render prod)
+- **Design**: Neo-Brutalist — black sidebar, white content, stark borders, Inter + DM Mono fonts
 - **Docs**: everything lives in [`docs/`](./docs/README.md), including an [AGENTS.md](./docs/AGENTS.md) for AI assistants
 
 ## Quick start (zero-config, SQLite)
