@@ -1,6 +1,9 @@
 using System.Text;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using MedicalDashboard.Api.Auth;
 using MedicalDashboard.Api.Data;
+using MedicalDashboard.Api.Hubs;
 using MedicalDashboard.Api.Middleware;
 using MedicalDashboard.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -19,9 +22,27 @@ var useSqlite = connStr.Contains("Data Source=", StringComparison.OrdinalIgnoreC
 builder.Services.AddDbContext<MedicalContext>(options =>
 {
     if (useSqlite)
-        options.UseSqlite(connStr);
+    {
+        options.UseSqlite(connStr, sqlite => sqlite.MigrationsAssembly("MedicalDashboard.Api"));
+    }
     else
-        options.UseSqlServer(connStr);
+    {
+        options.UseSqlServer(connStr, sql =>
+        {
+            sql.MigrationsAssembly("MedicalDashboard.Api");
+            // Transient-failure retry. SQL Server (especially Azure SQL / Docker)
+            // routinely closes idle connections; without this, the first request
+            // after an idle period 500s instead of recovering.
+            sql.EnableRetryOnFailure(
+                maxRetryCount: 5,
+                maxRetryDelay: TimeSpan.FromSeconds(10),
+                errorNumbersToAdd: null);
+        });
+    }
+
+    // Most endpoints are read-only; tracking is wasted CPU/RAM. Mutating
+    // services explicitly opt back in via .AsTracking() when needed.
+    options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
 });
 
 // --- JWT auth --------------------------------------------------------------
@@ -58,6 +79,23 @@ builder.Services
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key)),
             ClockSkew = TimeSpan.FromSeconds(30),
         };
+
+        // SignalR sends the JWT as ?access_token=... on the WebSocket upgrade because
+        // browsers can't set Authorization headers on WS connections. Pull it from the
+        // query string when the request targets one of our hubs.
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
+        };
     });
 
 builder.Services.AddAuthorization();
@@ -66,8 +104,15 @@ builder.Services.AddAuthorization();
 builder.Services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
 builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IPatientService, PatientService>();
+builder.Services.AddSingleton<IHealthScoreService, HealthScoreService>();
+builder.Services.AddSingleton<IPatientReportService, PatientReportService>();
 
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
+
+// --- Validation ------------------------------------------------------------
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 // --- Swagger with JWT ------------------------------------------------------
 builder.Services.AddEndpointsApiExplorer();
@@ -137,7 +182,11 @@ if (!app.Environment.IsDevelopment())
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+// Audit logging runs after auth so we have user claims, but before controller execution.
+app.UseMiddleware<AuditLoggingMiddleware>();
 app.MapControllers();
+// Real-time vitals hub. Clients connect at /hubs/vitals.
+app.MapHub<VitalsHub>("/hubs/vitals");
 
 // --- DB init + seed --------------------------------------------------------
 using (var scope = app.Services.CreateScope())
@@ -148,9 +197,9 @@ using (var scope = app.Services.CreateScope())
     {
         var ctx = services.GetRequiredService<MedicalContext>();
 
-        // For this demo we use EnsureCreated to avoid migration drift.
-        // For production hardening: switch to MigrateAsync and maintain proper migrations.
-        await ctx.Database.EnsureCreatedAsync();
+        // Apply any pending EF migrations on startup. Schema changes ship as
+        // committed migration files, not as runtime CREATE-IF-NOT-EXISTS.
+        await ctx.Database.MigrateAsync();
 
         await DbSeeder.SeedAsync(ctx, services);
     }
