@@ -12,5 +12,8 @@ public class Appointment
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
 
+    // Optimistic concurrency token rotated by MedicalContext on every update.
+    public Guid ConcurrencyStamp { get; set; } = Guid.NewGuid();
+
     public Patient Patient { get; set; } = null!;
 }

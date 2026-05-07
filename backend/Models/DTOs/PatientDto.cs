@@ -23,6 +23,21 @@ public class PatientDto
     public EmergencyContactDto EmergencyContact { get; set; } = new();
     public bool IsCurrentPatient { get; set; }
     public string? TreatmentNotes { get; set; }
+    // Care team. Either may be null (unassigned). Nested-object response keeps
+    // the read shape useful for UI; on write, only AssignedDoctorId/NurseId
+    // are honored.
+    public int? AssignedDoctorId { get; set; }
+    public int? AssignedNurseId { get; set; }
+    public AssignedClinicianDto? AssignedDoctor { get; set; }
+    public AssignedClinicianDto? AssignedNurse { get; set; }
+}
+
+public class AssignedClinicianDto
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Role { get; set; } = string.Empty;
+    public string? Specialty { get; set; }
 }
 
 public class ContactInfoDto

@@ -28,8 +28,23 @@ public class Patient
     // Allergies (stored as JSON array)
     public string AllergiesJson { get; set; } = "[]";
 
+    // Care team assignment. Restricts which clinicians can see this patient:
+    // doctors and nurses are scoped to their own roster; admins see everyone.
+    public int? AssignedDoctorId { get; set; }
+    public User? AssignedDoctor { get; set; }
+    public int? AssignedNurseId { get; set; }
+    public User? AssignedNurse { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
+
+    // Soft-delete: set when the record is "removed" through the API.
+    // A global query filter in MedicalContext hides rows where this is non-null.
+    public DateTime? DeletedAt { get; set; }
+
+    // Optimistic concurrency token. Rotated by MedicalContext.SaveChangesAsync
+    // on every update so two concurrent writers can't silently overwrite.
+    public Guid ConcurrencyStamp { get; set; } = Guid.NewGuid();
 
     // Navigation Properties
     public ICollection<Vital> Vitals { get; set; } = new List<Vital>();
