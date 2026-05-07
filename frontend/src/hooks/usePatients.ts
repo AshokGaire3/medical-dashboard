@@ -7,6 +7,7 @@ const keys = {
   all: ['patients'] as const,
   list: (q: PatientsQuery | undefined) => [...keys.all, 'list', q ?? {}] as const,
   detail: (id: number) => [...keys.all, 'detail', id] as const,
+  healthScore: (id: number) => [...keys.all, 'health-score', id] as const,
 };
 
 export function usePatients(params?: PatientsQuery) {
@@ -48,6 +49,16 @@ export function useUpdatePatient() {
       toast.success('Patient updated.');
     },
     onError: (err: Error) => toast.error(err.message),
+  });
+}
+
+// Loads NEWS2 health score for one patient; disabled until id is known.
+export function useHealthScore(id: number | undefined) {
+  return useQuery({
+    queryKey: id ? keys.healthScore(id) : ['patients', 'health-score', 'null'],
+    queryFn: () => patientsApi.healthScore(id!),
+    enabled: Boolean(id),
+    retry: false,
   });
 }
 

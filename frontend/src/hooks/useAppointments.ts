@@ -27,6 +27,20 @@ export function useCreateAppointment() {
   });
 }
 
+export function useUpdateAppointment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: number; body: Partial<Appointment> }) =>
+      appointmentsApi.update(id, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: keys.all });
+      qc.invalidateQueries({ queryKey: ['patients'] });
+      toast.success('Appointment updated.');
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+}
+
 export function useUpdateAppointmentStatus() {
   const qc = useQueryClient();
   return useMutation({
