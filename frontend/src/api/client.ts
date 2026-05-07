@@ -28,7 +28,7 @@ export interface RequestOptions {
   responseType?: 'json' | 'blob' | 'text';
 }
 
-type Listener = (event: 'unauthorized') => void;
+type Listener = (_event: 'unauthorized') => void;
 const listeners = new Set<Listener>();
 
 export function onAuthEvent(listener: Listener): () => void {

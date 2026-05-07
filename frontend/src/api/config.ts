@@ -17,8 +17,8 @@ function normalize(url: string): string {
 export const API_BASE_URL = normalize(rawUrl);
 
 if (import.meta.env.DEV) {
-
-  console.log('[api] base URL:', API_BASE_URL || '(not set)');
+  // eslint-disable-next-line no-console
+  console.info('[api] base URL:', API_BASE_URL || '(not set)');
 }
 
 export const TOKEN_STORAGE_KEY = 'meddash.token';
