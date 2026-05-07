@@ -1,3 +1,4 @@
+using MedicalDashboard.Api.Auth;
 using MedicalDashboard.Api.Data;
 using MedicalDashboard.Api.Models;
 using MedicalDashboard.Api.Models.DTOs;
@@ -24,7 +25,8 @@ public class MedicalConditionsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<MedicalConditionDto>>> GetConditions([FromQuery] int? patientId = null, [FromQuery] string? status = null)
     {
-        var query = _context.MedicalConditions.AsQueryable();
+        var rosterIds = _context.Patients.ScopedToCaller(User).Select(p => p.Id);
+        var query = _context.MedicalConditions.Where(c => rosterIds.Contains(c.PatientId));
 
         if (patientId.HasValue)
         {

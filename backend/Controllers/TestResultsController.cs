@@ -1,3 +1,4 @@
+using MedicalDashboard.Api.Auth;
 using MedicalDashboard.Api.Data;
 using MedicalDashboard.Api.Models;
 using MedicalDashboard.Api.Models.DTOs;
@@ -24,7 +25,8 @@ public class TestResultsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<TestResultDto>>> GetTestResults([FromQuery] int? patientId = null, [FromQuery] string? status = null)
     {
-        var query = _context.TestResults.AsQueryable();
+        var rosterIds = _context.Patients.ScopedToCaller(User).Select(p => p.Id);
+        var query = _context.TestResults.Where(t => rosterIds.Contains(t.PatientId));
 
         if (patientId.HasValue)
         {
@@ -52,6 +54,9 @@ public class TestResultsController : ControllerBase
             return NotFound();
         }
 
+        if (!await _context.Patients.CallerCanAccessPatientAsync(User, t.PatientId))
+            return NotFound();
+
         return Ok(MapToDto(t));
     }
 
@@ -59,10 +64,9 @@ public class TestResultsController : ControllerBase
     [Authorize(Roles = "Doctor,Admin")]
     public async Task<ActionResult<TestResultDto>> CreateTestResult(TestResultDto dto)
     {
-        var patientExists = await _context.Patients.AnyAsync(p => p.Id == dto.PatientId);
-        if (!patientExists)
+        if (!await _context.Patients.CallerCanAccessPatientAsync(User, dto.PatientId))
         {
-            return BadRequest(new { message = $"Patient {dto.PatientId} does not exist" });
+            return NotFound(new { message = $"Patient {dto.PatientId} does not exist" });
         }
 
         var t = new TestResult
@@ -100,6 +104,9 @@ public class TestResultsController : ControllerBase
             return NotFound();
         }
 
+        if (!await _context.Patients.CallerCanAccessPatientAsync(User, t.PatientId))
+            return NotFound();
+
         t.TestName = dto.TestName;
         t.TestType = dto.TestType;
         t.Date = DateTime.Parse(dto.Date);
@@ -123,6 +130,9 @@ public class TestResultsController : ControllerBase
         {
             return NotFound();
         }
+
+        if (!await _context.Patients.CallerCanAccessPatientAsync(User, t.PatientId))
+            return NotFound();
 
         _context.TestResults.Remove(t);
         await _context.SaveChangesAsync();

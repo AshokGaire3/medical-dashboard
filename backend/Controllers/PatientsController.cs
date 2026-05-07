@@ -1,6 +1,8 @@
+using MedicalDashboard.Api.Auth;
 using MedicalDashboard.Api.Data;
 using MedicalDashboard.Api.Models;
 using MedicalDashboard.Api.Models.DTOs;
+using MedicalDashboard.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -15,11 +17,19 @@ public class PatientsController : ControllerBase
 {
     private readonly MedicalContext _context;
     private readonly ILogger<PatientsController> _logger;
+    private readonly IHealthScoreService _healthScore;
+    private readonly IPatientReportService _report;
 
-    public PatientsController(MedicalContext context, ILogger<PatientsController> logger)
+    public PatientsController(
+        MedicalContext context,
+        ILogger<PatientsController> logger,
+        IHealthScoreService healthScore,
+        IPatientReportService report)
     {
         _context = context;
         _logger = logger;
+        _healthScore = healthScore;
+        _report = report;
     }
 
     // GET: api/patients?search=&status=&isCurrent=&page=&pageSize=&sortBy=&sortDir=
@@ -41,7 +51,9 @@ public class PatientsController : ControllerBase
             .Include(p => p.MedicalHistory)
             .Include(p => p.Medications)
             .Include(p => p.TestResults)
-            .AsQueryable();
+            .Include(p => p.AssignedDoctor)
+            .Include(p => p.AssignedNurse)
+            .ScopedToCaller(User);
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -90,12 +102,16 @@ public class PatientsController : ControllerBase
             .Include(p => p.MedicalHistory)
             .Include(p => p.Medications)
             .Include(p => p.TestResults)
+            .Include(p => p.AssignedDoctor)
+            .Include(p => p.AssignedNurse)
+            .ScopedToCaller(User)
             .FirstOrDefaultAsync(p => p.Id == id);
 
         return patient is null ? NotFound() : Ok(MapToDto(patient));
     }
 
     [HttpPost]
+    [Authorize(Roles = "Doctor,Admin,Nurse")]
     public async Task<ActionResult<PatientDto>> CreatePatient(PatientDto patientDto)
     {
         if (string.IsNullOrWhiteSpace(patientDto.Name))
@@ -107,19 +123,39 @@ public class PatientsController : ControllerBase
         patient.Id = 0;
         patient.CreatedAt = DateTime.UtcNow;
 
+        // If the creator is a Doctor or Nurse and didn't explicitly set their
+        // own slot in the care team, auto-assign themselves so the new patient
+        // is visible to them under the roster filter.
+        var callerId = User.GetUserId();
+        var callerRole = User.GetRole();
+        if (callerId is int uid)
+        {
+            if (callerRole == "Doctor" && patient.AssignedDoctorId is null)
+                patient.AssignedDoctorId = uid;
+            if (callerRole == "Nurse" && patient.AssignedNurseId is null)
+                patient.AssignedNurseId = uid;
+        }
+
         _context.Patients.Add(patient);
         await _context.SaveChangesAsync();
+
+        // Reload with assignment includes so MapToDto returns the populated
+        // AssignedDoctor/AssignedNurse projections.
+        await _context.Entry(patient).Reference(p => p.AssignedDoctor).LoadAsync();
+        await _context.Entry(patient).Reference(p => p.AssignedNurse).LoadAsync();
 
         _logger.LogInformation("Patient created {PatientId}", patient.Id);
         return CreatedAtAction(nameof(GetPatient), new { id = patient.Id }, MapToDto(patient));
     }
 
     [HttpPut("{id}")]
+    [Authorize(Roles = "Doctor,Admin,Nurse")]
     public async Task<IActionResult> UpdatePatient(int id, PatientDto patientDto)
     {
         if (id != patientDto.Id) return BadRequest();
 
-        var patient = await _context.Patients.FindAsync(id);
+        var patient = await _context.Patients.ScopedToCaller(User)
+            .FirstOrDefaultAsync(p => p.Id == id);
         if (patient is null) return NotFound();
 
         UpdatePatientFromDto(patient, patientDto);
@@ -132,13 +168,69 @@ public class PatientsController : ControllerBase
     [Authorize(Roles = "Doctor,Admin")]
     public async Task<IActionResult> DeletePatient(int id)
     {
-        var patient = await _context.Patients.FindAsync(id);
+        var patient = await _context.Patients.ScopedToCaller(User)
+            .FirstOrDefaultAsync(p => p.Id == id);
         if (patient is null) return NotFound();
 
-        _context.Patients.Remove(patient);
+        // Soft-delete: clinical records are retained for audit. The global
+        // query filter on Patient hides this row from subsequent reads.
+        patient.DeletedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
-        _logger.LogInformation("Patient deleted {PatientId}", id);
+        _logger.LogInformation("Patient soft-deleted {PatientId}", id);
         return NoContent();
+    }
+
+    // GET: api/patients/5/health-score
+    // Returns NEWS2-based risk score computed from the patient's most recent vital reading.
+    [HttpGet("{id}/health-score")]
+    public async Task<ActionResult<HealthScoreDto>> GetHealthScore(int id)
+    {
+        if (!await _context.Patients.CallerCanAccessPatientAsync(User, id))
+            return NotFound();
+
+        var latest = await _context.Vitals
+            .Where(v => v.PatientId == id)
+            .OrderByDescending(v => v.Timestamp)
+            .FirstOrDefaultAsync();
+
+        if (latest is null)
+            return Problem(
+                title: "No vitals recorded",
+                detail: "Cannot compute a health score: this patient has no vital readings.",
+                statusCode: StatusCodes.Status404NotFound);
+
+        return Ok(_healthScore.Score(latest));
+    }
+
+    // GET: api/patients/5/report.pdf
+    // Returns a printable PDF chart summary for the patient.
+    [HttpGet("{id}/report.pdf")]
+    public async Task<IActionResult> GetReportPdf(int id)
+    {
+        var patient = await _context.Patients
+            .Include(p => p.Vitals)
+            .Include(p => p.MedicalHistory)
+            .Include(p => p.Medications)
+            .Include(p => p.TestResults)
+            .ScopedToCaller(User)
+            .FirstOrDefaultAsync(p => p.Id == id);
+
+        if (patient is null) return NotFound();
+
+        // Snapshot the latest health score (or null if no vitals yet) so the PDF
+        // can show the band header without round-tripping a second service call.
+        HealthScoreSnapshot? snapshot = null;
+        var latestVital = patient.Vitals.OrderByDescending(v => v.Timestamp).FirstOrDefault();
+        if (latestVital is not null)
+        {
+            var score = _healthScore.Score(latestVital);
+            snapshot = new HealthScoreSnapshot(
+                score.Total, score.BandLabel, score.Recommendation, score.VitalTimestamp);
+        }
+
+        var pdf = _report.BuildPatientReport(patient, snapshot);
+        var safeName = string.Concat(patient.Name.Where(c => char.IsLetterOrDigit(c) || c == '-' || c == '_'));
+        return File(pdf, "application/pdf", $"patient-{safeName}-{DateTime.UtcNow:yyyyMMdd}.pdf");
     }
 
     private static PatientDto MapToDto(Patient patient)
@@ -227,7 +319,23 @@ public class PatientsController : ControllerBase
                 Status = tr.Status,
                 OrderedBy = tr.OrderedBy,
                 Notes = tr.Notes
-            }).ToList()
+            }).ToList(),
+            AssignedDoctorId = patient.AssignedDoctorId,
+            AssignedNurseId = patient.AssignedNurseId,
+            AssignedDoctor = MapClinician(patient.AssignedDoctor),
+            AssignedNurse = MapClinician(patient.AssignedNurse),
+        };
+    }
+
+    private static AssignedClinicianDto? MapClinician(User? user)
+    {
+        if (user is null) return null;
+        return new AssignedClinicianDto
+        {
+            Id = user.Id,
+            Name = user.Name,
+            Role = user.Role,
+            Specialty = user.Specialty,
         };
     }
 
@@ -256,6 +364,8 @@ public class PatientsController : ControllerBase
             EmergencyContactRelationship = dto.EmergencyContact?.Relationship ?? string.Empty,
             EmergencyContactPhone = dto.EmergencyContact?.Phone ?? string.Empty,
             AllergiesJson = allergiesJson,
+            AssignedDoctorId = dto.AssignedDoctorId,
+            AssignedNurseId = dto.AssignedNurseId,
         };
     }
 
@@ -281,6 +391,8 @@ public class PatientsController : ControllerBase
         patient.EmergencyContactRelationship = dto.EmergencyContact?.Relationship ?? string.Empty;
         patient.EmergencyContactPhone = dto.EmergencyContact?.Phone ?? string.Empty;
         patient.AllergiesJson = allergiesJson;
+        patient.AssignedDoctorId = dto.AssignedDoctorId;
+        patient.AssignedNurseId = dto.AssignedNurseId;
     }
 
     private static DateTime? TryParse(string? s)

@@ -1,8 +1,12 @@
+using MedicalDashboard.Api.Auth;
 using MedicalDashboard.Api.Data;
+using MedicalDashboard.Api.Hubs;
 using MedicalDashboard.Api.Models;
 using MedicalDashboard.Api.Models.DTOs;
+using MedicalDashboard.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace MedicalDashboard.Api.Controllers;
@@ -14,11 +18,19 @@ public class VitalsController : ControllerBase
 {
     private readonly MedicalContext _context;
     private readonly ILogger<VitalsController> _logger;
+    private readonly IHubContext<VitalsHub> _hub;
+    private readonly IHealthScoreService _healthScore;
 
-    public VitalsController(MedicalContext context, ILogger<VitalsController> logger)
+    public VitalsController(
+        MedicalContext context,
+        ILogger<VitalsController> logger,
+        IHubContext<VitalsHub> hub,
+        IHealthScoreService healthScore)
     {
         _context = context;
         _logger = logger;
+        _hub = hub;
+        _healthScore = healthScore;
     }
 
     // GET: api/vitals
@@ -27,7 +39,9 @@ public class VitalsController : ControllerBase
     {
         try
         {
-            var query = _context.Vitals.AsQueryable();
+            // Restrict to vitals belonging to patients in the caller's roster.
+            var rosterIds = _context.Patients.ScopedToCaller(User).Select(p => p.Id);
+            var query = _context.Vitals.Where(v => rosterIds.Contains(v.PatientId));
 
             if (patientId.HasValue)
             {
@@ -61,6 +75,9 @@ public class VitalsController : ControllerBase
                 return NotFound();
             }
 
+            if (!await _context.Patients.CallerCanAccessPatientAsync(User, vital.PatientId))
+                return NotFound();
+
             return Ok(MapToDto(vital));
         }
         catch (Exception ex)
@@ -72,10 +89,14 @@ public class VitalsController : ControllerBase
 
     // POST: api/vitals
     [HttpPost]
+    [Authorize(Roles = "Doctor,Admin,Nurse")]
     public async Task<ActionResult<VitalDto>> CreateVital(VitalDto vitalDto)
     {
         try
         {
+            if (!await _context.Patients.CallerCanAccessPatientAsync(User, vitalDto.PatientId))
+                return NotFound(new { message = "Patient not found." });
+
             var vital = new Vital
             {
                 PatientId = vitalDto.PatientId,
@@ -93,6 +114,14 @@ public class VitalsController : ControllerBase
             await _context.SaveChangesAsync();
 
             var createdDto = MapToDto(vital);
+
+            // Broadcast to anyone subscribed to this patient's group so live dashboards can update.
+            // Includes the freshly-computed NEWS2 score so clients can flash alerts without a second request.
+            var score = _healthScore.Score(vital);
+            await _hub.Clients
+                .Group($"patient-{vital.PatientId}")
+                .SendAsync("VitalRecorded", new { vital = createdDto, score });
+
             return CreatedAtAction(nameof(GetVital), new { id = vital.Id }, createdDto);
         }
         catch (Exception ex)
@@ -104,6 +133,7 @@ public class VitalsController : ControllerBase
 
     // PUT: api/vitals/5
     [HttpPut("{id}")]
+    [Authorize(Roles = "Doctor,Admin,Nurse")]
     public async Task<IActionResult> UpdateVital(int id, VitalDto vitalDto)
     {
         if (id != vitalDto.Id)
@@ -118,6 +148,9 @@ public class VitalsController : ControllerBase
             {
                 return NotFound();
             }
+
+            if (!await _context.Patients.CallerCanAccessPatientAsync(User, vital.PatientId))
+                return NotFound();
 
             vital.PatientId = vitalDto.PatientId;
             vital.Timestamp = DateTime.Parse(vitalDto.Timestamp);
@@ -152,6 +185,9 @@ public class VitalsController : ControllerBase
             {
                 return NotFound();
             }
+
+            if (!await _context.Patients.CallerCanAccessPatientAsync(User, vital.PatientId))
+                return NotFound();
 
             _context.Vitals.Remove(vital);
             await _context.SaveChangesAsync();

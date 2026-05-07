@@ -79,7 +79,9 @@ public class AuthController : ControllerBase
             return BadRequest(new { message = "Email and password are required." });
 
         var email = dto.Email.Trim().ToLowerInvariant();
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+        // AsTracking() because we mutate LastLoginAt below; the global
+        // default is NoTracking for read-only performance.
+        var user = await _context.Users.AsTracking().FirstOrDefaultAsync(u => u.Email == email);
         if (user is null || !_hasher.Verify(dto.Password, user.PasswordHash))
             return Unauthorized(new { message = "Invalid email or password." });
 

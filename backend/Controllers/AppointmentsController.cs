@@ -53,6 +53,7 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Doctor,Admin,Nurse")]
     public async Task<ActionResult<AppointmentDto>> Create([FromBody] AppointmentDto dto)
     {
         if (dto.PatientId <= 0) return BadRequest(new { message = "patientId is required." });
@@ -85,7 +86,7 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    [Authorize(Roles = "Doctor,Admin")]
+    [Authorize(Roles = "Doctor,Admin,Nurse")]
     public async Task<IActionResult> Update(int id, [FromBody] AppointmentDto dto)
     {
         var entity = await _context.Appointments.FindAsync(id);
@@ -106,6 +107,7 @@ public class AppointmentsController : ControllerBase
     }
 
     [HttpPatch("{id}/status")]
+    [Authorize(Roles = "Doctor,Admin,Nurse")]
     public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateAppointmentStatusDto dto)
     {
         if (!ValidStatuses.Contains(dto.Status))

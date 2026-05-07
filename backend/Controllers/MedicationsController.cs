@@ -1,3 +1,4 @@
+using MedicalDashboard.Api.Auth;
 using MedicalDashboard.Api.Data;
 using MedicalDashboard.Api.Models;
 using MedicalDashboard.Api.Models.DTOs;
@@ -24,7 +25,8 @@ public class MedicationsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<MedicationDto>>> GetMedications([FromQuery] int? patientId = null, [FromQuery] string? status = null)
     {
-        var query = _context.Medications.AsQueryable();
+        var rosterIds = _context.Patients.ScopedToCaller(User).Select(p => p.Id);
+        var query = _context.Medications.Where(m => rosterIds.Contains(m.PatientId));
 
         if (patientId.HasValue)
         {
@@ -52,6 +54,9 @@ public class MedicationsController : ControllerBase
             return NotFound();
         }
 
+        if (!await _context.Patients.CallerCanAccessPatientAsync(User, med.PatientId))
+            return NotFound();
+
         return Ok(MapToDto(med));
     }
 
@@ -59,10 +64,9 @@ public class MedicationsController : ControllerBase
     [Authorize(Roles = "Doctor,Admin")]
     public async Task<ActionResult<MedicationDto>> CreateMedication(MedicationDto dto)
     {
-        var patientExists = await _context.Patients.AnyAsync(p => p.Id == dto.PatientId);
-        if (!patientExists)
+        if (!await _context.Patients.CallerCanAccessPatientAsync(User, dto.PatientId))
         {
-            return BadRequest(new { message = $"Patient {dto.PatientId} does not exist" });
+            return NotFound(new { message = $"Patient {dto.PatientId} does not exist" });
         }
 
         var med = new Medication
@@ -86,7 +90,7 @@ public class MedicationsController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    [Authorize(Roles = "Doctor,Admin")]
+    [Authorize(Roles = "Doctor,Admin,Nurse")]
     public async Task<IActionResult> UpdateMedication(int id, MedicationDto dto)
     {
         if (id != dto.Id)
@@ -99,6 +103,9 @@ public class MedicationsController : ControllerBase
         {
             return NotFound();
         }
+
+        if (!await _context.Patients.CallerCanAccessPatientAsync(User, med.PatientId))
+            return NotFound();
 
         med.Name = dto.Name;
         med.Dosage = dto.Dosage;
@@ -123,6 +130,9 @@ public class MedicationsController : ControllerBase
         {
             return NotFound();
         }
+
+        if (!await _context.Patients.CallerCanAccessPatientAsync(User, med.PatientId))
+            return NotFound();
 
         _context.Medications.Remove(med);
         await _context.SaveChangesAsync();
