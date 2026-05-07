@@ -1,382 +1,317 @@
-import React, { useState } from 'react';
-import { Patient } from '../../types';
-import { 
-  X, Phone, Mail, MapPin, User, Heart, 
-  Pill, FileText, AlertTriangle, Activity,
-  Stethoscope, TestTube, UserCheck
+import { useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
+import {
+  X,
+  Phone,
+  Mail,
+  MapPin,
+  User,
+  AlertTriangle,
+  Activity,
+  Pill,
+  TestTube,
+  Stethoscope,
+  Printer,
+  FileDown,
+  Clock,
+  Heart,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { createPortal } from 'react-dom';
+import { Link } from 'react-router-dom';
+import { format, parseISO } from 'date-fns';
+import { patientsApi } from '../../api';
+import { Tabs } from '../ui/Tabs';
+import { StatusBadge } from '../ui/Badge';
+import { Button } from '../ui/Button';
+import { VitalsTab } from './VitalsTab';
+import { MedicationsTab } from './MedicationsTab';
+import { TestResultsTab } from './TestResultsTab';
+import { ConditionsTab } from './ConditionsTab';
+import { TimelineTab } from './TimelineTab';
+import { HealthScoreCard } from './HealthScoreCard';
+import { useVitals } from '../../hooks/useVitals';
+import type { Patient } from '../../types';
 
 interface PatientProfileProps {
   patient: Patient;
   onClose: () => void;
 }
 
-const PatientProfile: React.FC<PatientProfileProps> = ({ patient, onClose }) => {
-  const [activeTab, setActiveTab] = useState('overview');
+type TabId =
+  | 'overview'
+  | 'vitals'
+  | 'medications'
+  | 'tests'
+  | 'conditions'
+  | 'timeline';
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Stable':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'Critical':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'Improving':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'Monitoring':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+export default function PatientProfile({ patient, onClose }: PatientProfileProps) {
+  const [tab, setTab] = useState<TabId>('overview');
+  const [downloading, setDownloading] = useState(false);
+
+  // Fetch the server-rendered PDF and trigger a browser download.
+  const downloadPdf = async () => {
+    setDownloading(true);
+    try {
+      const blob = await patientsApi.reportPdf(patient.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `patient-${patient.name.replace(/[^a-z0-9]/gi, '-')}-${new Date()
+        .toISOString()
+        .split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error((err as Error).message || 'PDF download failed');
+    } finally {
+      setDownloading(false);
     }
   };
 
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case 'Mild':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'Moderate':
-        return 'bg-orange-100 text-orange-800';
-      case 'Severe':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+  const tabs = useMemo(
+    () => [
+      { id: 'overview' as const, label: 'Overview', icon: <User className="w-4 h-4" /> },
+      { id: 'vitals' as const, label: 'Vitals', icon: <Activity className="w-4 h-4" /> },
+      { id: 'medications' as const, label: 'Medications', icon: <Pill className="w-4 h-4" /> },
+      { id: 'tests' as const, label: 'Tests', icon: <TestTube className="w-4 h-4" /> },
+      { id: 'conditions' as const, label: 'Conditions', icon: <Stethoscope className="w-4 h-4" /> },
+      { id: 'timeline' as const, label: 'Timeline', icon: <Clock className="w-4 h-4" /> },
+    ],
+    [],
+  );
 
-  const getTestStatusColor = (status: string) => {
-    switch (status) {
-      case 'Normal':
-        return 'bg-green-100 text-green-800';
-      case 'Abnormal':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'Critical':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getMedicationStatusColor = (status: string) => {
-    switch (status) {
-      case 'Active':
-        return 'bg-green-100 text-green-800';
-      case 'Discontinued':
-        return 'bg-red-100 text-red-800';
-      case 'Completed':
-        return 'bg-blue-100 text-blue-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const tabs = [
-    { id: 'overview', label: 'Overview', icon: User },
-    { id: 'medical-history', label: 'Medical History', icon: FileText },
-    { id: 'medications', label: 'Medications', icon: Pill },
-    { id: 'test-results', label: 'Test Results', icon: TestTube },
-    { id: 'vitals', label: 'Vitals', icon: Activity },
-  ];
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+  return createPortal(
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
       onClick={onClose}
     >
-      <motion.div
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <div
+        className="relative bg-themeWhite dark:bg-themeBlack shadow-2xl max-w-5xl w-full max-h-[92vh] overflow-hidden flex flex-col border-2 border-themeBlack dark:border-themeWhite"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                <span className="text-blue-600 font-bold text-xl">
-                  {patient.name.split(' ').map(n => n[0]).join('')}
+        <div className="p-5 border-b border-themeBlack dark:border-themeWhite bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-blue-100 dark:bg-blue-900/40 rounded-full flex items-center justify-center">
+                <span className="text-blue-700 dark:text-blue-300 font-bold text-lg">
+                  {patient.name
+                    .split(' ')
+                    .map((n) => n[0])
+                    .slice(0, 2)
+                    .join('')}
                 </span>
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">{patient.name}</h2>
-                <div className="flex items-center space-x-4 mt-1">
-                  <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full border ${getStatusColor(patient.status)}`}>
-                    {patient.status}
+                <h2 className="text-xl font-bold text-themeBlack dark:text-themeWhite">
+                  {patient.name}
+                </h2>
+                <div className="flex items-center gap-3 mt-1 flex-wrap">
+                  <StatusBadge status={patient.status} />
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    {patient.age} yrs · {patient.gender}
                   </span>
-                  <span className="text-sm text-gray-600">{patient.age} years old • {patient.gender}</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    {patient.condition}
+                  </span>
                 </div>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5 text-gray-500" />
-            </button>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="border-b border-gray-200 bg-gray-50">
-          <div className="flex space-x-8 px-6">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center space-x-2 py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700'
-                  }`}
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                leftIcon={<FileDown className="w-4 h-4" />}
+                onClick={downloadPdf}
+                disabled={downloading}
+              >
+                {downloading ? 'Generating…' : 'PDF'}
+              </Button>
+              <Link to={`/patients/${patient.id}/print`} target="_blank" rel="noopener">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  leftIcon={<Printer className="w-4 h-4" />}
                 >
-                  <Icon className="w-4 h-4" />
-                  <span>{tab.label}</span>
-                </button>
-              );
-            })}
+                  Print
+                </Button>
+              </Link>
+              <button
+                onClick={onClose}
+                aria-label="Close"
+                className="p-1.5 hover:bg-white/60 dark:hover:bg-gray-800 text-themeBlack/60 dark:text-themeWhite/60"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {activeTab === 'overview' && (
-            <div className="space-y-6">
-              {/* Basic Information */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="font-semibold text-gray-900 mb-4 flex items-center">
-                    <User className="w-5 h-5 mr-2 text-blue-600" />
-                    Patient Information
-                  </h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Age:</span>
-                      <span className="font-medium">{patient.age} years</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Gender:</span>
-                      <span className="font-medium">{patient.gender}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Last Visit:</span>
-                      <span className="font-medium">{new Date(patient.lastVisit).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Primary Condition:</span>
-                      <span className="font-medium">{patient.condition}</span>
-                    </div>
-                  </div>
-                </div>
+        <div className="px-4 bg-themeWhite dark:bg-themeBlack">
+          <Tabs tabs={tabs} value={tab} onChange={(id) => setTab(id as TabId)} />
+        </div>
 
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="font-semibold text-gray-900 mb-4 flex items-center">
-                    <Phone className="w-5 h-5 mr-2 text-green-600" />
-                    Contact Information
-                  </h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-3">
-                      <Phone className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm">{patient.contactInfo.phone}</span>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <Mail className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm">{patient.contactInfo.email}</span>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <MapPin className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm">{patient.contactInfo.address}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+        <div className="flex-1 overflow-y-auto p-5 bg-gray-50 dark:bg-gray-950">
+          {tab === 'overview' && <OverviewPanel patient={patient} />}
+          {tab === 'vitals' && <VitalsTab patientId={patient.id} />}
+          {tab === 'medications' && <MedicationsTab patientId={patient.id} />}
+          {tab === 'tests' && <TestResultsTab patientId={patient.id} />}
+          {tab === 'conditions' && <ConditionsTab patientId={patient.id} />}
+          {tab === 'timeline' && <TimelineTab patientId={patient.id} />}
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
 
-              {/* Emergency Contact & Allergies */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-red-50 rounded-lg p-4 border border-red-200">
-                  <h3 className="font-semibold text-red-900 mb-4 flex items-center">
-                    <UserCheck className="w-5 h-5 mr-2 text-red-600" />
-                    Emergency Contact
-                  </h3>
-                  <div className="space-y-2">
-                    <p className="font-medium text-red-900">{patient.emergencyContact.name}</p>
-                    <p className="text-sm text-red-700">{patient.emergencyContact.relationship}</p>
-                    <p className="text-sm text-red-700">{patient.emergencyContact.phone}</p>
-                  </div>
-                </div>
+function OverviewPanel({ patient }: { patient: Patient }) {
+  const vitalsQ = useVitals(patient.id);
+  const latest = (vitalsQ.data ?? [])[0];
 
-                <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
-                  <h3 className="font-semibold text-yellow-900 mb-4 flex items-center">
-                    <AlertTriangle className="w-5 h-5 mr-2 text-yellow-600" />
-                    Allergies
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {patient.allergies.map((allergy, index) => (
-                      <span
-                        key={index}
-                        className="px-2 py-1 bg-yellow-100 text-yellow-800 text-sm rounded-full border border-yellow-300"
-                      >
-                        {allergy}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
+  return (
+    <div className="space-y-4">
+      {/* NEWS2 risk score derived from the patient's latest vitals. */}
+      <HealthScoreCard patientId={patient.id} />
 
-              {/* Recent Vitals */}
-              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                <h3 className="font-semibold text-blue-900 mb-4 flex items-center">
-                  <Heart className="w-5 h-5 mr-2 text-blue-600" />
-                  Recent Vital Signs
-                </h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center">
-                    <p className="text-sm text-blue-600 font-medium">Heart Rate</p>
-                    <p className="text-2xl font-bold text-blue-800">72 bpm</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm text-blue-600 font-medium">Blood Pressure</p>
-                    <p className="text-2xl font-bold text-blue-800">120/80</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm text-blue-600 font-medium">Temperature</p>
-                    <p className="text-2xl font-bold text-blue-800">98.6°F</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm text-blue-600 font-medium">O2 Saturation</p>
-                    <p className="text-2xl font-bold text-blue-800">98%</p>
-                  </div>
-                </div>
-              </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card icon={<User className="w-4 h-4 text-blue-600" />} title="Patient information">
+          <Row label="Age" value={`${patient.age} yrs`} />
+          <Row label="Gender" value={patient.gender} />
+          <Row
+            label="Last visit"
+            value={patient.lastVisit ? new Date(patient.lastVisit).toLocaleDateString() : '—'}
+          />
+          <Row label="Primary condition" value={patient.condition} />
+          {patient.admissionDate ? (
+            <Row
+              label="Admitted"
+              value={new Date(patient.admissionDate).toLocaleDateString()}
+            />
+          ) : null}
+        </Card>
+
+        <Card icon={<Phone className="w-4 h-4 text-green-600" />} title="Contact">
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center gap-2 text-themeBlack dark:text-themeWhite">
+              <Phone className="w-4 h-4 text-gray-400" />
+              {patient.contactInfo?.phone || '—'}
             </div>
-          )}
+            <div className="flex items-center gap-2 text-themeBlack dark:text-themeWhite">
+              <Mail className="w-4 h-4 text-gray-400" />
+              {patient.contactInfo?.email || '—'}
+            </div>
+            <div className="flex items-center gap-2 text-themeBlack dark:text-themeWhite">
+              <MapPin className="w-4 h-4 text-gray-400" />
+              {patient.contactInfo?.address || '—'}
+            </div>
+          </div>
+        </Card>
+      </div>
 
-          {activeTab === 'medical-history' && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                <Stethoscope className="w-5 h-5 mr-2 text-blue-600" />
-                Medical History
-              </h3>
-              {patient.medicalHistory.map((condition) => (
-                <div key={condition.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h4 className="font-semibold text-gray-900">{condition.condition}</h4>
-                      <p className="text-sm text-gray-600">
-                        Diagnosed: {new Date(condition.diagnosedDate).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="flex space-x-2">
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getSeverityColor(condition.severity)}`}>
-                        {condition.severity}
-                      </span>
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                        condition.status === 'Active' ? 'bg-red-100 text-red-800' :
-                        condition.status === 'Resolved' ? 'bg-green-100 text-green-800' :
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {condition.status}
-                      </span>
-                    </div>
-                  </div>
-                  <p className="text-gray-700 text-sm">{condition.notes}</p>
-                </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40 p-4">
+          <h3 className="text-sm font-semibold text-red-900 dark:text-red-200 mb-2 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4" /> Emergency contact
+          </h3>
+          <p className="text-sm text-red-900 dark:text-red-100 font-medium">
+            {patient.emergencyContact?.name || '—'}
+          </p>
+          <p className="text-xs text-red-800 dark:text-red-300">
+            {patient.emergencyContact?.relationship} · {patient.emergencyContact?.phone}
+          </p>
+        </div>
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800/40 p-4">
+          <h3 className="text-sm font-semibold text-yellow-900 dark:text-yellow-200 mb-2 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4" /> Allergies
+          </h3>
+          {patient.allergies?.length ? (
+            <div className="flex flex-wrap gap-1.5">
+              {patient.allergies.map((a, i) => (
+                <span
+                  key={i}
+                  className="px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-900 dark:text-yellow-200 text-xs rounded-full border border-yellow-300 dark:border-yellow-700"
+                >
+                  {a}
+                </span>
               ))}
             </div>
-          )}
-
-          {activeTab === 'medications' && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                <Pill className="w-5 h-5 mr-2 text-green-600" />
-                Current Medications
-              </h3>
-              {patient.medications.map((medication) => (
-                <div key={medication.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h4 className="font-semibold text-gray-900">{medication.name}</h4>
-                      <p className="text-sm text-gray-600">
-                        {medication.dosage} • {medication.frequency}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Prescribed by {medication.prescribedBy} on {new Date(medication.startDate).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getMedicationStatusColor(medication.status)}`}>
-                      {medication.status}
-                    </span>
-                  </div>
-                  {medication.notes && (
-                    <p className="text-gray-700 text-sm bg-gray-50 p-2 rounded">{medication.notes}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {activeTab === 'test-results' && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                <TestTube className="w-5 h-5 mr-2 text-purple-600" />
-                Test Results
-              </h3>
-              {patient.testResults.map((test) => (
-                <div key={test.id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h4 className="font-semibold text-gray-900">{test.testName}</h4>
-                      <p className="text-sm text-gray-600">
-                        {test.testType} • {new Date(test.date).toLocaleDateString()}
-                      </p>
-                      <p className="text-xs text-gray-500">Ordered by {test.orderedBy}</p>
-                    </div>
-                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getTestStatusColor(test.status)}`}>
-                      {test.status}
-                    </span>
-                  </div>
-                  <div className="space-y-2">
-                    <div>
-                      <span className="text-sm font-medium text-gray-700">Result: </span>
-                      <span className="text-sm text-gray-900">{test.result}</span>
-                    </div>
-                    {test.normalRange && (
-                      <div>
-                        <span className="text-sm font-medium text-gray-700">Normal Range: </span>
-                        <span className="text-sm text-gray-600">{test.normalRange}</span>
-                      </div>
-                    )}
-                    {test.notes && (
-                      <p className="text-sm text-gray-700 bg-gray-50 p-2 rounded">{test.notes}</p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {activeTab === 'vitals' && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                <Activity className="w-5 h-5 mr-2 text-red-600" />
-                Vital Signs History
-              </h3>
-              <div className="bg-white border border-gray-200 rounded-lg p-4">
-                <p className="text-gray-600 text-center py-8">
-                  Vital signs chart would be displayed here with historical data visualization.
-                </p>
-              </div>
-            </div>
+          ) : (
+            <p className="text-sm text-yellow-900 dark:text-yellow-200">None recorded</p>
           )}
         </div>
-      </motion.div>
-    </motion.div>
-  );
-};
+      </div>
 
-export default PatientProfile;
+      <Card icon={<Heart className="w-4 h-4 text-blue-600" />} title="Latest vitals">
+        {latest ? (
+          <div>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <Metric label="Heart rate" value={`${latest.heartRate} bpm`} />
+              <Metric
+                label="Blood pressure"
+                value={`${latest.bloodPressureSystemic}/${latest.bloodPressureDiastolic}`}
+              />
+              <Metric label="Temperature" value={`${latest.temperature}°F`} />
+              <Metric label="SpO₂" value={`${latest.oxygenSaturation}%`} />
+              <Metric label="Resp" value={`${latest.respiratoryRate}`} />
+            </div>
+            <p className="text-xs text-themeBlack/60 dark:text-themeWhite/60 mt-3">
+              Recorded {format(parseISO(latest.timestamp), 'MMM d, yyyy · h:mm a')}
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm text-themeBlack/60 dark:text-themeWhite/60">No vitals recorded yet.</p>
+        )}
+      </Card>
+
+      {patient.treatmentNotes ? (
+        <Card icon={<Stethoscope className="w-4 h-4 text-indigo-600" />} title="Treatment notes">
+          <p className="text-sm text-themeBlack dark:text-themeWhite">{patient.treatmentNotes}</p>
+        </Card>
+      ) : null}
+    </div>
+  );
+}
+
+function Card({
+  icon,
+  title,
+  children,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="bg-themeWhite dark:bg-themeBlack border-2 border-themeBlack dark:border-themeWhite p-4">
+      <h3 className="text-sm font-semibold text-themeBlack dark:text-themeWhite mb-3 flex items-center gap-2">
+        {icon}
+        {title}
+      </h3>
+      <div className="space-y-1.5">{children}</div>
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between text-sm">
+      <span className="text-themeBlack/60 dark:text-themeWhite/60">{label}</span>
+      <span className="font-medium text-themeBlack dark:text-themeWhite">{value}</span>
+    </div>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="bg-gray-50 dark:bg-gray-800 p-3 text-center">
+      <p className="text-xs text-themeBlack/60 dark:text-themeWhite/60">{label}</p>
+      <p className="text-base font-semibold text-themeBlack dark:text-themeWhite">{value}</p>
+    </div>
+  );
+}

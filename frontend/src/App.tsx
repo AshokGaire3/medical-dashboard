@@ -12,6 +12,8 @@ import Profile from './pages/Profile';
 import LoginPage from './pages/Login';
 import RegisterPage from './pages/Register';
 import NotFound from './pages/NotFound';
+import PatientPrint from './pages/PatientPrint';
+import AuditLogs from './pages/AuditLogs';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 
 const PAGE_TITLES: Record<string, { title: string; description: string }> = {
@@ -22,6 +24,7 @@ const PAGE_TITLES: Record<string, { title: string; description: string }> = {
   '/reports': { title: 'Reports', description: 'Export patient and clinical data.' },
   '/profile': { title: 'Profile', description: 'Your account and preferences.' },
   '/settings': { title: 'Settings', description: 'Configure the application.' },
+  '/audit-logs': { title: 'Audit log', description: 'Review who changed what, and when.' },
 };
 
 function Shell() {
@@ -49,6 +52,8 @@ function Shell() {
             <Route path="/reports" element={<Reports />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/settings" element={<Settings />} />
+            {/* Page-level role check happens inside AuditLogs (Admin only). */}
+            <Route path="/audit-logs" element={<AuditLogs />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
@@ -62,6 +67,14 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route
+        path="/patients/:id/print"
+        element={
+          <ProtectedRoute>
+            <PatientPrint />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/*"
         element={

@@ -15,16 +15,17 @@ import {
   USER_STORAGE_KEY,
   ApiError,
 } from '../api';
-import type { AuthUser, LoginInput, RegisterInput } from '../types';
+import type { AuthUser, LoginInput, RegisterInput, UserRole } from '../types';
 
 interface AuthContextValue {
   user: AuthUser | null;
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (input: LoginInput) => Promise<void>;
-  register: (input: RegisterInput) => Promise<void>;
+  login: (_input: LoginInput) => Promise<void>;
+  register: (_input: RegisterInput) => Promise<void>;
   logout: () => void;
+  hasRole: (_roles: UserRole | UserRole[]) => boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -125,6 +126,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [handleAuthSuccess],
   );
 
+  const hasRole = useCallback(
+    (roles: UserRole | UserRole[]) => {
+      if (!user) return false;
+      const list = Array.isArray(roles) ? roles : [roles];
+      return list.includes(user.role);
+    },
+    [user],
+  );
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -134,13 +144,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       register,
       logout,
+      hasRole,
     }),
-    [user, token, isLoading, login, register, logout],
+    [user, token, isLoading, login, register, logout, hasRole],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>.');

@@ -14,7 +14,7 @@ const STORAGE_KEY = 'meddash.theme';
 interface ThemeContextValue {
   theme: Theme;
   toggle: () => void;
-  setTheme: (t: Theme) => void;
+  setTheme: (_t: Theme) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
@@ -42,6 +42,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useTheme(): ThemeContextValue {
   const ctx = useContext(ThemeContext);
   if (!ctx) throw new Error('useTheme must be used inside <ThemeProvider>.');

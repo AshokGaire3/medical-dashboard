@@ -4,7 +4,7 @@ import { Eye, Clock } from 'lucide-react';
 
 interface PatientTableProps {
   patients: Patient[];
-  onViewPatient: (patient: Patient) => void;
+  onViewPatient: (_patient: Patient) => void;
   patientType?: 'current' | 'historical' | 'all';
 }
 
@@ -47,7 +47,7 @@ const PatientTable: React.FC<PatientTableProps> = ({ patients, onViewPatient, pa
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div className="bg-white shadow-sm border border-gray-200 overflow-hidden">
       <div className="px-6 py-4 border-b border-gray-200">
         <h3 className="text-lg font-semibold text-gray-800">
           {patientType === 'current' ? 'Current Patients' : 
