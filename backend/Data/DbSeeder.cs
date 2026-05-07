@@ -754,6 +754,117 @@ public static class DbSeeder
             condDetail: ("Anorexia Nervosa (Recovering)", "Severe", "Active", "Weight restoration in progress. Multidisciplinary team."),
             med: ("Fluoxetine", "20mg", "Once daily", "Active", "May increase appetite slightly."),
             test: ("Electrolyte Panel", "Blood Test", "All within normal limits", "Normal", "Normal"));
+
+        // ── Recovered patients ──────────────────────────────────────────────
+        yield return BuildRecovered(
+            name: "Marcus Webb", age: 34, gender: "Male",
+            condition: "COVID-19 (Recovered)",
+            phone: "(555) 800-0001", email: "marcus.webb@email.com",
+            allergies: Array.Empty<string>(),
+            admissionDaysAgo: 45, dischargedDaysAgo: 30,
+            vital: (HR: 70, SBP: 118, DBP: 76, Temp: 98.6, SpO2: 99, RR: 14, HoursAgo: 24),
+            condDetail: ("COVID-19 Pneumonia", "Moderate", "Resolved", "Admitted with moderate COVID-19; supplemental O2 briefly required. Full recovery; cleared for normal activity."),
+            med: ("Paxlovid (completed)", "nirmatrelvir 300mg/ritonavir 100mg", "Twice daily x 5 days", "Discontinued", "Course completed during admission."),
+            test: ("SARS-CoV-2 PCR", "Microbiology", "Not detected", "Not detected", "Normal"));
+
+        yield return BuildRecovered(
+            name: "Fatima Al-Hassan", age: 28, gender: "Female",
+            condition: "Bacterial Pneumonia (Recovered)",
+            phone: "(555) 800-0002", email: "fatima.alhassan@email.com",
+            allergies: new[] { "Penicillin" },
+            admissionDaysAgo: 60, dischargedDaysAgo: 48,
+            vital: (HR: 68, SBP: 112, DBP: 72, Temp: 98.4, SpO2: 99, RR: 14, HoursAgo: 48),
+            condDetail: ("Community-Acquired Pneumonia (CAP)", "Moderate", "Resolved", "Right lower lobe consolidation on admission CXR. Completed IV then oral antibiotic course. Chest X-ray at discharge clear."),
+            med: ("Azithromycin (completed)", "500mg", "Once daily x 5 days", "Discontinued", "Penicillin allergy — macrolide used."),
+            test: ("Chest X-Ray", "Imaging", "Clear; no consolidation", "Normal", "Normal"));
+
+        yield return BuildRecovered(
+            name: "Tyler Brooks", age: 22, gender: "Male",
+            condition: "Appendicitis (Post-Op)",
+            phone: "(555) 800-0003", email: "tyler.brooks@email.com",
+            allergies: Array.Empty<string>(),
+            admissionDaysAgo: 25, dischargedDaysAgo: 20,
+            vital: (HR: 66, SBP: 114, DBP: 72, Temp: 98.5, SpO2: 99, RR: 14, HoursAgo: 12),
+            condDetail: ("Acute Appendicitis", "Moderate", "Resolved", "Laparoscopic appendectomy performed without complications. Wound healed well; no post-operative infection."),
+            med: ("Ibuprofen (PRN)", "400mg", "Every 6h as needed", "Discontinued", "Pain now fully resolved."),
+            test: ("WBC", "Blood Test", "6.8 x10³/µL", "4.5 - 11.0 x10³/µL", "Normal"));
+
+        yield return BuildRecovered(
+            name: "Priya Nair", age: 40, gender: "Female",
+            condition: "Kidney Stones (Recovered)",
+            phone: "(555) 800-0004", email: "priya.nair@email.com",
+            allergies: new[] { "Sulfa drugs" },
+            admissionDaysAgo: 35, dischargedDaysAgo: 28,
+            vital: (HR: 72, SBP: 118, DBP: 76, Temp: 98.6, SpO2: 99, RR: 15, HoursAgo: 36),
+            condDetail: ("Nephrolithiasis (4mm ureteral stone)", "Moderate", "Resolved", "Stone passed spontaneously with tamsulosin therapy. No hydronephrosis on follow-up ultrasound."),
+            med: ("Tamsulosin (completed)", "0.4mg", "Once daily x 4 weeks", "Discontinued", "Alpha-blocker to facilitate stone passage."),
+            test: ("Renal Ultrasound", "Imaging", "No residual calculi; no hydronephrosis", "Normal", "Normal"));
+
+        yield return BuildRecovered(
+            name: "George Okafor", age: 55, gender: "Male",
+            condition: "Sepsis (Recovered)",
+            phone: "(555) 800-0005", email: "george.okafor@email.com",
+            allergies: Array.Empty<string>(),
+            admissionDaysAgo: 90, dischargedDaysAgo: 72,
+            vital: (HR: 74, SBP: 122, DBP: 78, Temp: 98.6, SpO2: 98, RR: 16, HoursAgo: 72),
+            condDetail: ("Gram-Negative Sepsis (E. coli bacteremia)", "Severe", "Resolved", "Source: urinary tract. ICU admission x 4 days; vasopressors weaned by day 3. Full hemodynamic recovery; antibiotics completed."),
+            med: ("Ceftriaxone (completed)", "2g", "IV once daily x 14 days", "Discontinued", "Sensitivity confirmed; de-escalated from broad spectrum."),
+            test: ("Blood Culture", "Microbiology", "No growth (x48h)", "No growth", "Normal"));
+
+        yield return BuildRecovered(
+            name: "Chloe Nguyen", age: 17, gender: "Female",
+            condition: "Fracture — Right Wrist (Healed)",
+            phone: "(555) 800-0006", email: "nguyen.family@email.com",
+            allergies: Array.Empty<string>(),
+            admissionDaysAgo: 55, dischargedDaysAgo: 50,
+            vital: (HR: 72, SBP: 108, DBP: 68, Temp: 98.5, SpO2: 99, RR: 15, HoursAgo: 6),
+            condDetail: ("Distal Radius Fracture (Colles type)", "Moderate", "Resolved", "Closed reduction + casting performed in ED. Ortho follow-up confirmed anatomic alignment. Cast removed; full range of motion restored."),
+            med: ("Ibuprofen (PRN)", "400mg", "Every 8h as needed", "Discontinued", "Pain now fully resolved."),
+            test: ("Wrist X-Ray (follow-up)", "Imaging", "Healed fracture; normal alignment", "Normal", "Normal"));
+
+        yield return BuildRecovered(
+            name: "Samuel Osei", age: 48, gender: "Male",
+            condition: "Tuberculosis (Cured)",
+            phone: "(555) 800-0007", email: "samuel.osei@email.com",
+            allergies: Array.Empty<string>(),
+            admissionDaysAgo: 200, dischargedDaysAgo: 30,
+            vital: (HR: 70, SBP: 120, DBP: 78, Temp: 98.5, SpO2: 98, RR: 15, HoursAgo: 48),
+            condDetail: ("Pulmonary Tuberculosis (drug-sensitive)", "Severe", "Resolved", "Completed standard 6-month RIPE therapy. Serial sputum cultures negative from month 2 onward. Declared cured by public health authority."),
+            med: ("RIPE Therapy (completed)", "Rifampicin/Isoniazid/Pyrazinamide/Ethambutol", "Once daily x 6 months", "Discontinued", "Course completed; no adverse hepatotoxicity."),
+            test: ("Sputum AFB Culture", "Microbiology", "No growth", "No growth", "Normal"));
+
+        yield return BuildRecovered(
+            name: "Amelia Pham", age: 31, gender: "Female",
+            condition: "Dengue Fever (Recovered)",
+            phone: "(555) 800-0008", email: "amelia.pham@email.com",
+            allergies: Array.Empty<string>(),
+            admissionDaysAgo: 20, dischargedDaysAgo: 13,
+            vital: (HR: 74, SBP: 112, DBP: 70, Temp: 98.6, SpO2: 99, RR: 15, HoursAgo: 24),
+            condDetail: ("Dengue Fever (without warning signs)", "Moderate", "Resolved", "Managed with IV fluids and supportive care. Platelet nadir 68,000 on day 4; normalised by discharge. Full recovery; advised re-hydration."),
+            med: ("Paracetamol (completed)", "1g", "Every 6h as needed x 7 days", "Discontinued", "Avoid NSAIDs in dengue — aspirin contraindicated."),
+            test: ("Platelet Count", "Blood Test", "185,000 /µL", "150,000 - 400,000 /µL", "Normal"));
+
+        yield return BuildRecovered(
+            name: "Derek Hughes", age: 62, gender: "Male",
+            condition: "Thyroid Cancer (Remission)",
+            phone: "(555) 800-0009", email: "derek.hughes@email.com",
+            allergies: Array.Empty<string>(),
+            admissionDaysAgo: 730, dischargedDaysAgo: 700,
+            vital: (HR: 72, SBP: 126, DBP: 80, Temp: 98.5, SpO2: 98, RR: 15, HoursAgo: 24),
+            condDetail: ("Papillary Thyroid Carcinoma (Stage I)", "Moderate", "Resolved", "Total thyroidectomy + RAI therapy completed 2 years ago. Undetectable thyroglobulin on annual testing. Excellent prognosis; 5-year surveillance ongoing."),
+            med: ("Levothyroxine", "125mcg", "Once daily", "Active", "TSH-suppressive dose; take on empty stomach."),
+            test: ("Thyroglobulin", "Blood Test", "< 0.1 ng/mL (undetectable)", "< 1.0 ng/mL", "Normal"));
+
+        yield return BuildRecovered(
+            name: "Rosa Delgado", age: 45, gender: "Female",
+            condition: "Cellulitis (Recovered)",
+            phone: "(555) 800-0010", email: "rosa.delgado@email.com",
+            allergies: new[] { "Penicillin" },
+            admissionDaysAgo: 18, dischargedDaysAgo: 12,
+            vital: (HR: 70, SBP: 118, DBP: 76, Temp: 98.4, SpO2: 99, RR: 14, HoursAgo: 6),
+            condDetail: ("Left Lower Leg Cellulitis", "Moderate", "Resolved", "Admitted for IV antibiotics after failure of outpatient oral therapy. Responded within 48h; transitioned to oral; discharged with full resolution of erythema and swelling."),
+            med: ("Clindamycin (completed)", "300mg", "Four times daily x 10 days", "Discontinued", "Penicillin allergy — clindamycin selected."),
+            test: ("CRP", "Blood Test", "3.1 mg/L", "< 5.0 mg/L", "Normal"));
     }
 
     // Compact patient builder used by BuildAdditionalPatients(). Keeps each
@@ -840,6 +951,35 @@ public static class DbSeeder
             });
         }
 
+        return patient;
+    }
+
+    // Variant of Build() specifically for discharged / recovered patients.
+    // Sets Status = "Recovered", IsCurrentPatient = false, and stamps a
+    // DischargeDate so analytics can distinguish this cohort.
+    private static Patient BuildRecovered(
+        string name, int age, string gender, string condition,
+        string phone, string email, string[] allergies,
+        int admissionDaysAgo, int dischargedDaysAgo,
+        (int HR, int SBP, int DBP, double Temp, int SpO2, int RR, int HoursAgo) vital,
+        (string Condition, string Severity, string Status, string Notes) condDetail,
+        (string Name, string Dosage, string Frequency, string Status, string Notes) med,
+        (string Name, string Type, string Result, string Range, string Status)? test)
+    {
+        var patient = Build(
+            name: name, age: age, gender: gender,
+            condition: condition, status: "Recovered",
+            phone: phone, email: email,
+            allergies: allergies,
+            admissionDaysAgo: admissionDaysAgo,
+            vital: vital,
+            condDetail: condDetail,
+            med: med,
+            test: test);
+
+        patient.IsCurrentPatient = false;
+        patient.DischargeDate = DateTime.Today.AddDays(-dischargedDaysAgo);
+        patient.TreatmentNotes = condDetail.Notes;
         return patient;
     }
 
@@ -940,6 +1080,7 @@ public static class DbSeeder
 
         var currentPatients = await context.Patients
             .Where(p => p.IsCurrentPatient)
+            .OrderBy(p => p.Id)
             .Take(20)
             .ToListAsync();
 

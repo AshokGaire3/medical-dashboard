@@ -111,9 +111,12 @@ public class DashboardController : ControllerBase
     [HttpGet("alerts")]
     public async Task<IActionResult> GetAlerts()
     {
+        // Correlated anti-join: keep only the vital for which no later vital
+        // exists for the same patient. This is reliably translated to SQL by
+        // EF Core and avoids loading every vital into memory.
         var latestPerPatient = await _context.Vitals
-            .GroupBy(v => v.PatientId)
-            .Select(g => g.OrderByDescending(v => v.Timestamp).First())
+            .Where(v => !_context.Vitals.Any(v2 =>
+                v2.PatientId == v.PatientId && v2.Timestamp > v.Timestamp))
             .ToListAsync();
 
         var patientMap = await _context.Patients

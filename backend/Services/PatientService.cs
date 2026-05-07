@@ -169,12 +169,12 @@ public class PatientService : IPatientService
             TreatmentStartDate = dto.TreatmentStartDate != null ? DateTime.Parse(dto.TreatmentStartDate) : null,
             IsCurrentPatient = dto.IsCurrentPatient,
             TreatmentNotes = dto.TreatmentNotes,
-            ContactPhone = dto.ContactInfo.Phone,
-            ContactEmail = dto.ContactInfo.Email,
-            ContactAddress = dto.ContactInfo.Address,
-            EmergencyContactName = dto.EmergencyContact.Name,
-            EmergencyContactRelationship = dto.EmergencyContact.Relationship,
-            EmergencyContactPhone = dto.EmergencyContact.Phone,
+            ContactPhone = dto.ContactInfo?.Phone ?? string.Empty,
+            ContactEmail = dto.ContactInfo?.Email ?? string.Empty,
+            ContactAddress = dto.ContactInfo?.Address ?? string.Empty,
+            EmergencyContactName = dto.EmergencyContact?.Name ?? string.Empty,
+            EmergencyContactRelationship = dto.EmergencyContact?.Relationship ?? string.Empty,
+            EmergencyContactPhone = dto.EmergencyContact?.Phone ?? string.Empty,
             AllergiesJson = allergiesJson
         };
     }
@@ -194,12 +194,12 @@ public class PatientService : IPatientService
         patient.TreatmentStartDate = dto.TreatmentStartDate != null ? DateTime.Parse(dto.TreatmentStartDate) : null;
         patient.IsCurrentPatient = dto.IsCurrentPatient;
         patient.TreatmentNotes = dto.TreatmentNotes;
-        patient.ContactPhone = dto.ContactInfo.Phone;
-        patient.ContactEmail = dto.ContactInfo.Email;
-        patient.ContactAddress = dto.ContactInfo.Address;
-        patient.EmergencyContactName = dto.EmergencyContact.Name;
-        patient.EmergencyContactRelationship = dto.EmergencyContact.Relationship;
-        patient.EmergencyContactPhone = dto.EmergencyContact.Phone;
+        patient.ContactPhone = dto.ContactInfo?.Phone ?? string.Empty;
+        patient.ContactEmail = dto.ContactInfo?.Email ?? string.Empty;
+        patient.ContactAddress = dto.ContactInfo?.Address ?? string.Empty;
+        patient.EmergencyContactName = dto.EmergencyContact?.Name ?? string.Empty;
+        patient.EmergencyContactRelationship = dto.EmergencyContact?.Relationship ?? string.Empty;
+        patient.EmergencyContactPhone = dto.EmergencyContact?.Phone ?? string.Empty;
         patient.AllergiesJson = allergiesJson;
     }
 }

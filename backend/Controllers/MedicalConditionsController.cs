@@ -48,7 +48,13 @@ public class MedicalConditionsController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<MedicalConditionDto>> GetCondition(int id)
     {
-        var c = await _context.MedicalConditions.FindAsync(id);
+        // Enforce caller's roster scope so a Doctor/Nurse cannot fetch another
+        // clinician's patient conditions by guessing a condition ID.
+        var rosterIds = _context.Patients.ScopedToCaller(User).Select(p => p.Id);
+        var c = await _context.MedicalConditions
+            .Where(mc => rosterIds.Contains(mc.PatientId) && mc.Id == id)
+            .FirstOrDefaultAsync();
+
         if (c == null)
         {
             return NotFound();

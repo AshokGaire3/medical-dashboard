@@ -103,7 +103,6 @@ builder.Services.AddAuthorization();
 // --- App services ----------------------------------------------------------
 builder.Services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
 builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
-builder.Services.AddScoped<IPatientService, PatientService>();
 builder.Services.AddSingleton<IHealthScoreService, HealthScoreService>();
 builder.Services.AddSingleton<IPatientReportService, PatientReportService>();
 

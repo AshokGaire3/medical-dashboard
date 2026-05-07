@@ -50,7 +50,7 @@ public class AuthController : ControllerBase
         var role = AllowedRoles.Contains(dto.Role) ? dto.Role : "Doctor";
         // First user ever may self-register as Admin; otherwise admin role requires existing admin.
         var hasAnyUser = await _context.Users.AnyAsync();
-        if (role == "Admin" && hasAnyUser && !(User.Identity?.IsAuthenticated ?? false && User.IsInRole("Admin")))
+        if (role == "Admin" && hasAnyUser && !((User.Identity?.IsAuthenticated ?? false) && User.IsInRole("Admin")))
         {
             role = "Doctor";
         }

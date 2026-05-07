@@ -97,10 +97,13 @@ public class VitalsController : ControllerBase
             if (!await _context.Patients.CallerCanAccessPatientAsync(User, vitalDto.PatientId))
                 return NotFound(new { message = "Patient not found." });
 
+            if (!DateTime.TryParse(vitalDto.Timestamp, out var ts))
+                return BadRequest(new { message = "Timestamp must be a valid ISO date/time." });
+
             var vital = new Vital
             {
                 PatientId = vitalDto.PatientId,
-                Timestamp = DateTime.Parse(vitalDto.Timestamp),
+                Timestamp = ts,
                 HeartRate = vitalDto.HeartRate,
                 BloodPressureSystemic = vitalDto.BloodPressureSystemic,
                 BloodPressureDiastolic = vitalDto.BloodPressureDiastolic,
@@ -152,8 +155,11 @@ public class VitalsController : ControllerBase
             if (!await _context.Patients.CallerCanAccessPatientAsync(User, vital.PatientId))
                 return NotFound();
 
+            if (!DateTime.TryParse(vitalDto.Timestamp, out var ts))
+                return BadRequest(new { message = "Timestamp must be a valid ISO date/time." });
+
             vital.PatientId = vitalDto.PatientId;
-            vital.Timestamp = DateTime.Parse(vitalDto.Timestamp);
+            vital.Timestamp = ts;
             vital.HeartRate = vitalDto.HeartRate;
             vital.BloodPressureSystemic = vitalDto.BloodPressureSystemic;
             vital.BloodPressureDiastolic = vitalDto.BloodPressureDiastolic;
