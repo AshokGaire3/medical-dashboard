@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Users,
   Heart,
@@ -6,7 +6,10 @@ import {
   CheckCircle,
   Activity as ActivityIcon,
   Calendar,
+  ArrowRight,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import PatientProfile from '../components/Patients/PatientProfile';
 import MetricCard from '../components/Dashboard/MetricCard';
 import CustomLineChart from '../components/Charts/LineChart';
 import CustomPieChart from '../components/Charts/PieChart';
@@ -14,8 +17,8 @@ import CustomBarChart from '../components/Charts/BarChart';
 import { Spinner } from '../components/ui/Spinner';
 import { ErrorState } from '../components/ui/ErrorState';
 import { useDashboardAlerts, useDashboardMetrics, useVitalsTrend } from '../hooks/useDashboard';
-import { usePatients } from '../hooks/usePatients';
-import { PIE_CHART_COLORS } from '../utils/constants';
+import { usePatient, usePatients } from '../hooks/usePatients';
+
 import { useAppointments } from '../hooks/useAppointments';
 
 export default function Dashboard() {
@@ -34,6 +37,7 @@ export default function Dashboard() {
     to: tomorrow.toISOString(),
     status: 'Scheduled',
   });
+  const [selectedPatientId, setSelectedPatientId] = useState<number | null>(null);
 
   if (metricsQ.isLoading || patientsQ.isLoading) {
     return (
@@ -125,9 +129,9 @@ export default function Dashboard() {
           <CustomLineChart
             data={trend}
             dataKeys={[
-              { key: 'heartRate', color: '#ef4444', name: 'Heart Rate (bpm)' },
-              { key: 'systolicBP', color: '#3b82f6', name: 'Systolic BP (mmHg)' },
-              { key: 'oxygenSat', color: '#10b981', name: 'O₂ Saturation (%)' },
+              { key: 'heartRate', color: '#0a0a0a', name: 'Heart Rate (bpm)' },
+              { key: 'systolicBP', color: '#2563eb', name: 'Systolic BP (mmHg)' },
+              { key: 'oxygenSat', color: '#16a34a', name: 'O₂ Saturation (%)' },
             ]}
             xAxisKey="date"
             title="Vitals trend — last 7 days"
@@ -135,7 +139,7 @@ export default function Dashboard() {
         </div>
         <CustomPieChart
           data={conditionDistribution}
-          colors={PIE_CHART_COLORS as unknown as string[]}
+          colors={['#2563eb', '#16a34a', '#0a0a0a', '#6b7280']}
           title="Conditions (current patients)"
         />
       </div>
@@ -145,32 +149,38 @@ export default function Dashboard() {
           data={ageGroupData}
           dataKey="count"
           xAxisKey="ageGroup"
-          color="#3b82f6"
+          color="#2563eb"
           title="Patient demographics"
         />
 
-        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
+        <div className="bg-themeWhite dark:bg-themeBlack border-2 border-themeBlack dark:border-themeWhite p-6 shadow-brutal dark:shadow-brutal-sm">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-black text-themeBlack dark:text-themeWhite uppercase tracking-tight">
               Today's appointments
             </h3>
-            <Calendar className="w-5 h-5 text-gray-400" />
+            <Link
+              to="/appointments"
+              className="inline-flex items-center gap-1 text-sm font-bold text-accentBlue hover:underline uppercase tracking-wide"
+            >
+              <Calendar strokeWidth={2} className="w-4 h-4" />
+              View calendar
+            </Link>
           </div>
           {upcomingQ.isLoading ? (
             <Spinner size="sm" />
           ) : (upcomingQ.data?.length ?? 0) === 0 ? (
-            <p className="text-sm text-gray-500 dark:text-gray-400">No upcoming appointments.</p>
+            <p className="text-sm text-themeBlack/60 dark:text-themeWhite/60">No upcoming appointments.</p>
           ) : (
             <ul className="divide-y divide-gray-100 dark:divide-gray-800">
               {(upcomingQ.data ?? []).slice(0, 6).map((a) => (
-                <li key={a.id} className="py-3 flex items-center justify-between">
+                <li key={a.id} className="py-4 flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    <p className="text-base font-bold text-themeBlack dark:text-themeWhite uppercase">
                       {a.patientName ?? `Patient #${a.patientId}`}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{a.reason}</p>
+                    <p className="text-sm font-semibold text-themeBlack/60 dark:text-themeWhite/60 tracking-wider uppercase mt-1">{a.reason}</p>
                   </div>
-                  <span className="text-sm text-gray-600 dark:text-gray-300">
+                  <span className="text-sm font-black text-themeBlack dark:text-themeWhite tracking-widest">
                     {new Date(a.scheduledAt).toLocaleTimeString([], {
                       hour: '2-digit',
                       minute: '2-digit',
@@ -183,49 +193,70 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <ActivityIcon className="w-5 h-5 text-red-500" />
-          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Critical alerts</h3>
+      <div className="bg-themeWhite dark:bg-themeBlack border-2 border-themeBlack dark:border-themeWhite p-6 shadow-brutal dark:shadow-brutal-sm">
+        <div className="flex items-center gap-3 mb-6 border-b-2 border-themeBlack dark:border-themeWhite pb-4">
+          <div className="bg-themeBlack dark:bg-themeWhite text-themeWhite dark:text-themeBlack p-2 border-2 border-themeBlack dark:border-themeWhite">
+            <ActivityIcon strokeWidth={2} className="w-6 h-6" />
+          </div>
+          <h3 className="text-xl font-black text-themeBlack dark:text-themeWhite uppercase tracking-tight">Critical alerts</h3>
         </div>
         {alertsQ.isLoading ? (
           <Spinner size="sm" />
         ) : alerts.length === 0 ? (
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-themeBlack/60 dark:text-themeWhite/60">
             No vitals outside expected ranges right now.
           </p>
         ) : (
           <ul className="space-y-3">
             {alerts.slice(0, 6).map((a, i) => (
-              <li
-                key={i}
-                className="flex items-start gap-3 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/40"
-              >
-                <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
-                <div className="flex-1">
-                  <div className="flex justify-between">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                      {a.patient}
+              <li key={i}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedPatientId(a.patientId)}
+                  className="w-full text-left flex items-start gap-4 p-4 border-2 border-themeBlack dark:border-themeWhite hover:bg-themeBlack hover:text-themeWhite dark:hover:bg-themeWhite dark:hover:text-themeBlack transition-all group"
+                >
+                  <AlertTriangle strokeWidth={2} className="w-6 h-6 text-themeBlack dark:text-themeWhite group-hover:text-themeWhite dark:group-hover:text-themeBlack mt-0.5 shrink-0" />
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center">
+                      <p className="text-base font-black uppercase tracking-tight">
+                        {a.patient}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`text-xs px-3 py-1 font-bold uppercase tracking-widest border-2 border-current ${
+                            a.severity === 'Critical'
+                              ? 'text-themeBlack dark:text-themeWhite'
+                              : 'text-themeBlack/70 dark:text-themeWhite/70'
+                          }`}
+                        >
+                          {a.severity}
+                        </span>
+                        <ArrowRight strokeWidth={2} className="w-4 h-4 text-inherit" />
+                      </div>
+                    </div>
+                    <p className="text-sm font-semibold uppercase tracking-wider mt-2 opacity-80">
+                      {a.vital}: {a.value}
                     </p>
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full ${
-                        a.severity === 'Critical'
-                          ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
-                          : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300'
-                      }`}
-                    >
-                      {a.severity}
-                    </span>
                   </div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
-                    {a.vital}: {a.value}
-                  </p>
-                </div>
+                </button>
               </li>
             ))}
           </ul>
         )}
       </div>
+
+      {selectedPatientId ? (
+        <SelectedPatientModal
+          id={selectedPatientId}
+          onClose={() => setSelectedPatientId(null)}
+        />
+      ) : null}
     </div>
   );
+}
+
+function SelectedPatientModal({ id, onClose }: { id: number; onClose: () => void }) {
+  const q = usePatient(id);
+  if (q.isLoading || !q.data) return null;
+  return <PatientProfile patient={q.data} onClose={onClose} />;
 }

@@ -18,7 +18,7 @@ export default function Analytics() {
   const trendQ = useVitalsTrend(days);
   const patientsQ = usePatients({ pageSize: 200 });
 
-  const patients = patientsQ.data?.items ?? [];
+  const patients = useMemo(() => patientsQ.data?.items ?? [], [patientsQ.data]);
 
   const statusBreakdown = useMemo(() => {
     const counts: Record<string, number> = {};

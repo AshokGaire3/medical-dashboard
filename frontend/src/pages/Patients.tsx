@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import PatientProfile from '../components/Patients/PatientProfile';
 import { PatientFormModal } from '../components/Patients/PatientFormModal';
+import { RequireRole } from '../components/auth/RequireRole';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
@@ -93,8 +94,8 @@ export default function Patients() {
         <StatCard icon={Clock} color="purple" label="Lifetime" value={counts.lifetime} hint="Total" />
       </div>
 
-      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-4">
-        <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg w-full">
+      <div className="bg-themeWhite dark:bg-themeBlack border-2 border-themeBlack dark:border-themeWhite p-4 shadow-brutal dark:shadow-brutal-sm">
+        <div className="flex gap-2 bg-themeBlack dark:bg-themeWhite p-2 w-full">
           {(['current', 'historical', 'all'] as TypeFilter[]).map((t) => (
             <button
               key={t}
@@ -102,10 +103,10 @@ export default function Patients() {
                 setTypeFilter(t);
                 setPage(1);
               }}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium capitalize transition-colors ${
+              className={`flex-1 py-2 px-4 text-sm font-bold capitalize transition-all border-2 border-transparent ${
                 typeFilter === t
-                  ? 'bg-white dark:bg-gray-900 text-blue-600 shadow-sm'
-                  : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
+                  ? 'bg-themeWhite text-themeBlack dark:bg-themeBlack dark:text-themeWhite border-themeBlack dark:border-themeWhite'
+                  : 'text-themeWhite hover:text-themeWhite/80 dark:text-themeBlack dark:hover:text-themeBlack/80'
               }`}
             >
               {t}
@@ -114,11 +115,11 @@ export default function Patients() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-4">
-        <div className="flex flex-col md:flex-row gap-3 md:items-end">
+      <div className="bg-themeWhite dark:bg-themeBlack border-2 border-themeBlack dark:border-themeWhite p-4 shadow-brutal dark:shadow-brutal-sm">
+        <div className="flex flex-col md:flex-row gap-4 md:items-end">
           <div className="flex-1">
             <Input
-              leftIcon={<Search className="w-4 h-4" />}
+              leftIcon={<Search strokeWidth={2} className="w-4 h-4" />}
               placeholder="Search by name or condition…"
               value={search}
               onChange={(e) => {
@@ -127,7 +128,7 @@ export default function Patients() {
               }}
             />
           </div>
-          <div className="w-full md:w-56">
+          <div className="w-full md:w-64">
             <Select
               value={statusFilter}
               onChange={(e) => {
@@ -135,24 +136,24 @@ export default function Patients() {
                 setPage(1);
               }}
               options={[
-                { value: '', label: 'All statuses' },
-                ...PATIENT_STATUSES.map((s) => ({ value: s, label: s })),
+                { value: '', label: 'ALL STATUSES' },
+                ...PATIENT_STATUSES.map((s) => ({ value: s, label: s.toUpperCase() })),
               ]}
             />
           </div>
-          <Button leftIcon={<Plus className="w-4 h-4" />} onClick={() => setCreating(true)}>
+          <Button leftIcon={<Plus strokeWidth={2} className="w-4 h-4" />} onClick={() => setCreating(true)}>
             Add patient
           </Button>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center">
+      <div className="bg-themeWhite dark:bg-themeBlack border-2 border-themeBlack dark:border-themeWhite shadow-brutal dark:shadow-brutal-sm overflow-hidden">
+        <div className="px-6 py-4 border-b-2 border-themeBlack dark:border-themeWhite flex justify-between items-center">
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 capitalize">
+            <h3 className="text-xl font-black text-themeBlack dark:text-themeWhite uppercase tracking-tight">
               {typeFilter} patients
             </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm font-bold text-themeBlack/60 dark:text-themeWhite/60 tracking-wider uppercase mt-1">
               {total} patient{total !== 1 ? 's' : ''}
             </p>
           </div>
@@ -180,7 +181,7 @@ export default function Patients() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-800/60">
+              <thead className="bg-themeBlack dark:bg-themeWhite text-themeWhite dark:text-themeBlack">
                 <tr>
                   <Th>Patient</Th>
                   <Th>Age</Th>
@@ -190,24 +191,20 @@ export default function Patients() {
                   <Th className="text-right pr-6">Actions</Th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+              <tbody className="divide-y-2 divide-themeBlack dark:divide-themeWhite">
                 {patients.map((p) => (
-                  <tr key={p.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                    <td className="px-6 py-3">
-                      <div className="flex items-center gap-3">
+                  <tr key={p.id} className="hover:bg-themeBlack hover:text-themeWhite dark:hover:bg-themeWhite dark:hover:text-themeBlack transition-colors group">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-4">
                         <div
-                          className={`w-9 h-9 rounded-full flex items-center justify-center ${
+                          className={`w-10 h-10 border-2 border-current flex items-center justify-center font-bold ${
                             p.isCurrentPatient
-                              ? 'bg-blue-100 dark:bg-blue-900/40'
-                              : 'bg-gray-100 dark:bg-gray-800'
+                              ? 'bg-accentBlue text-themeWhite border-themeBlack dark:border-themeWhite'
+                              : 'bg-themeBlack text-themeWhite dark:bg-themeWhite dark:text-themeBlack'
                           }`}
                         >
                           <span
-                            className={`text-sm font-semibold ${
-                              p.isCurrentPatient
-                                ? 'text-blue-700 dark:text-blue-300'
-                                : 'text-gray-600 dark:text-gray-300'
-                            }`}
+                            className="text-sm tracking-widest uppercase"
                           >
                             {p.name
                               .split(' ')
@@ -217,38 +214,40 @@ export default function Patients() {
                           </span>
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          <p className="text-base font-bold uppercase tracking-tight">
                             {p.name}
                           </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{p.gender}</p>
+                          <p className="text-xs font-semibold uppercase tracking-widest mt-1 opacity-70">{p.gender}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300">{p.age}</td>
-                    <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300">
+                    <td className="px-6 py-4 text-sm font-bold uppercase">{p.age}</td>
+                    <td className="px-6 py-4 text-sm font-bold uppercase">
                       {p.condition}
                     </td>
-                    <td className="px-6 py-3">
+                    <td className="px-6 py-4">
                       <StatusBadge status={p.status} />
                     </td>
-                    <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300">
+                    <td className="px-6 py-4 text-sm font-bold uppercase">
                       {p.lastVisit ? new Date(p.lastVisit).toLocaleDateString() : '—'}
                     </td>
-                    <td className="px-6 py-3 text-right pr-6">
-                      <div className="inline-flex items-center gap-1">
+                    <td className="px-6 py-4 text-right pr-6">
+                      <div className="inline-flex items-center gap-2">
                         <IconButton onClick={() => setSelected(p)} title="View">
-                          <Eye className="w-4 h-4" />
+                          <Eye strokeWidth={2} className="w-4 h-4" />
                         </IconButton>
                         <IconButton onClick={() => setEditing(p)} title="Edit">
-                          <Pencil className="w-4 h-4" />
+                          <Pencil strokeWidth={2} className="w-4 h-4" />
                         </IconButton>
-                        <IconButton
-                          onClick={() => setConfirmDelete(p)}
-                          title="Delete"
-                          variant="danger"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </IconButton>
+                        <RequireRole roles={['Doctor', 'Admin']}>
+                          <IconButton
+                            onClick={() => setConfirmDelete(p)}
+                            title="Delete"
+                            variant="danger"
+                          >
+                            <Trash2 strokeWidth={2} className="w-4 h-4" />
+                          </IconButton>
+                        </RequireRole>
                       </div>
                     </td>
                   </tr>
@@ -259,8 +258,8 @@ export default function Patients() {
         )}
 
         {totalPages > 1 && (
-          <div className="px-6 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-800">
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+          <div className="px-6 py-3 flex items-center justify-between border-t border-themeBlack dark:border-themeWhite">
+            <p className="text-xs text-themeBlack/60 dark:text-themeWhite/60">
               Page {page} of {totalPages} · {total} total
             </p>
             <div className="flex gap-1">
@@ -309,7 +308,7 @@ export default function Patients() {
 function Th({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
     <th
-      className={`px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider ${className}`}
+      className={`px-6 py-4 text-left text-xs font-black uppercase tracking-widest ${className}`}
     >
       {children}
     </th>
@@ -350,28 +349,28 @@ function StatCard({
   value,
   hint,
 }: {
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string, strokeWidth?: number | string }>;
   color: 'blue' | 'red' | 'green' | 'purple';
   label: string;
   value: number;
   hint?: string;
 }) {
   const tones: Record<string, string> = {
-    blue: 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300',
-    red: 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-300',
-    green: 'bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-300',
-    purple: 'bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300',
+    blue: 'bg-accentBlue text-themeWhite border-2 border-themeBlack dark:border-themeWhite',
+    green: 'bg-accentGreen text-themeWhite border-2 border-themeBlack dark:border-themeWhite',
+    red: 'bg-themeBlack text-themeWhite dark:bg-themeWhite dark:text-themeBlack border-2 border-themeBlack dark:border-themeWhite',
+    purple: 'bg-themeBlack text-themeWhite dark:bg-themeWhite dark:text-themeBlack border-2 border-themeBlack dark:border-themeWhite',
   };
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6">
+    <div className="bg-themeWhite dark:bg-themeBlack border-2 border-themeBlack dark:border-themeWhite p-6 hover:-translate-y-1 hover:shadow-brutal dark:hover:shadow-brutal-sm transition-all group">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{label}</p>
-          <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{value}</p>
-          {hint ? <p className="text-xs text-gray-500 dark:text-gray-400">{hint}</p> : null}
+          <p className="text-sm font-black tracking-widest text-themeBlack/70 dark:text-themeWhite/70 mb-2 uppercase">{label}</p>
+          <p className="text-4xl font-black text-themeBlack dark:text-themeWhite tracking-tighter">{value}</p>
+          {hint ? <p className="text-sm mt-3 text-themeBlack/60 dark:text-themeWhite/60 font-semibold tracking-wider uppercase">{hint}</p> : null}
         </div>
-        <div className={`p-3 rounded-lg ${tones[color]}`}>
-          <Icon className="w-6 h-6" />
+        <div className={`p-3 shrink-0 transition-transform group-hover:scale-110 ${tones[color]}`}>
+          <Icon strokeWidth={1.5} className="w-8 h-8" />
         </div>
       </div>
     </div>
@@ -399,12 +398,12 @@ function ConfirmDialog({
       onClick={onCancel}
     >
       <div
-        className="bg-white dark:bg-gray-900 rounded-xl shadow-xl w-full max-w-sm p-6 border border-gray-200 dark:border-gray-800"
+        className="bg-themeWhite dark:bg-themeBlack shadow-xl w-full max-w-sm p-6 border-2 border-themeBlack dark:border-themeWhite"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
+        <h3 className="text-lg font-semibold text-themeBlack dark:text-themeWhite">{title}</h3>
         {description ? (
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{description}</p>
+          <p className="text-sm text-themeBlack/60 dark:text-themeWhite/60 mt-2">{description}</p>
         ) : null}
         <div className="mt-6 flex justify-end gap-2">
           <Button variant="outline" onClick={onCancel} disabled={loading}>
