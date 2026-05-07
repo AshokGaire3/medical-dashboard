@@ -64,7 +64,10 @@ public class PatientService : IPatientService
         var patient = await _context.Patients.FindAsync(id);
         if (patient == null) return false;
 
-        _context.Patients.Remove(patient);
+        // Soft-delete: clinical records are never truly removed. The global
+        // query filter in MedicalContext hides this row from every subsequent
+        // query unless callers explicitly opt out via IgnoreQueryFilters().
+        patient.DeletedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
         return true;
     }
