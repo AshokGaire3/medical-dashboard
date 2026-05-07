@@ -1,4 +1,5 @@
 using System.Text;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using MedicalDashboard.Api.Auth;
@@ -13,15 +14,33 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- Configuration: database provider (SQLite fallback) --------------------
+// --- Configuration: database provider (SQLite / PostgreSQL / SQL Server) ---
+// Detection order:
+//   "Host="   in the conn string  → PostgreSQL (Render / Supabase / etc.)
+//   "Data Source=" without Server → SQLite (local dev default)
+//   anything else                 → SQL Server (docker-compose / Azure)
 var connStr = builder.Configuration.GetConnectionString("DefaultConnection")
-              ?? "Data Source=meddash.db";
-var useSqlite = connStr.Contains("Data Source=", StringComparison.OrdinalIgnoreCase)
-                && !connStr.Contains("Server=", StringComparison.OrdinalIgnoreCase);
+              ?? "Data Source=../database/meddash.db";
+var usePostgres = connStr.Contains("Host=", StringComparison.OrdinalIgnoreCase);
+var useSqlite   = !usePostgres
+                  && connStr.Contains("Data Source=", StringComparison.OrdinalIgnoreCase)
+                  && !connStr.Contains("Server=", StringComparison.OrdinalIgnoreCase);
 
 builder.Services.AddDbContext<MedicalContext>(options =>
 {
-    if (useSqlite)
+    if (usePostgres)
+    {
+        options.UseNpgsql(connStr, npgsql =>
+        {
+            npgsql.MigrationsAssembly("MedicalDashboard.Api");
+            // Transient-failure retry for cloud Postgres (Render spins down free DBs).
+            npgsql.EnableRetryOnFailure(
+                maxRetryCount: 5,
+                maxRetryDelay: TimeSpan.FromSeconds(10),
+                errorCodesToAdd: null);
+        });
+    }
+    else if (useSqlite)
     {
         options.UseSqlite(connStr, sqlite => sqlite.MigrationsAssembly("MedicalDashboard.Api"));
     }

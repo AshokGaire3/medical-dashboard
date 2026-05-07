@@ -1,7 +1,16 @@
-# Render blueprint for the Medical Dashboard backend.
-# Push to main and Render auto-deploys via the existing Dockerfile.
-# Set the JWT__KEY env var (>= 32 chars) in the Render dashboard before the first deploy.
+# Render Blueprint — Medical Dashboard
+# ─────────────────────────────────────
+# Deploy steps:
+#   1. Push this repo to GitHub.
+#   2. Go to https://dashboard.render.com → New → Blueprint.
+#   3. Connect your repo; Render picks up this file automatically.
+#   4. In the Render dashboard set the following "secret" env vars on the
+#      `meddash-api` service BEFORE the first deploy:
+#        - Jwt__Key          : any random string >= 32 characters
+#        - Cors__AllowedOrigins__0 : your Vercel/Netlify frontend URL
+
 services:
+  # ── ASP.NET Core API ────────────────────────────────────────────────────────
   - type: web
     name: meddash-api
     runtime: docker
@@ -14,17 +23,28 @@ services:
         value: Production
       - key: ASPNETCORE_URLS
         value: http://+:5000
+
+      # JWT — set Jwt__Key manually in the Render dashboard (>= 32 chars).
       - key: Jwt__Key
-        sync: false   # Set this manually in the Render dashboard.
+        sync: false
       - key: Jwt__Issuer
         value: meddash
       - key: Jwt__Audience
         value: meddash-clients
+
+      # PostgreSQL — auto-populated from the database service below.
       - key: ConnectionStrings__DefaultConnection
-        value: Data Source=/var/data/meddash.db
+        fromDatabase:
+          name: meddash-db
+          property: connectionString
+
+      # CORS — set to your deployed frontend URL in the Render dashboard.
       - key: Cors__AllowedOrigins__0
-        sync: false   # Your Vercel frontend URL, e.g. https://meddash.vercel.app
-    disk:
-      name: meddash-data
-      mountPath: /var/data
-      sizeGB: 1
+        sync: false
+
+# ── Render-managed PostgreSQL (free tier) ─────────────────────────────────────
+databases:
+  - name: meddash-db
+    plan: free
+    databaseName: meddash
+    user: meddash
