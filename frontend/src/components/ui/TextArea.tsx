@@ -6,7 +6,7 @@ export interface TextAreaProps extends TextareaHTMLAttributes<HTMLTextAreaElemen
 }
 
 const base =
-  'block w-full rounded-lg border px-3 py-2 text-sm bg-white text-gray-900 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-gray-100 dark:border-gray-700 dark:placeholder-gray-500';
+  'block w-full border px-3 py-2 text-sm bg-white text-gray-900 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-gray-100 dark:border-gray-700 dark:placeholder-gray-500';
 
 export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(function TextArea(
   { label, error, id, className = '', rows = 3, ...rest },
@@ -18,7 +18,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(function 
       {label ? (
         <label
           htmlFor={inputId}
-          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          className="block text-sm font-medium text-themeBlack dark:text-themeWhite"
         >
           {label}
         </label>

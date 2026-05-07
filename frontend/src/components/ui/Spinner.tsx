@@ -14,7 +14,7 @@ const sizes = {
 
 export function Spinner({ size = 'md', label, className = '' }: SpinnerProps) {
   return (
-    <div className={`flex items-center gap-2 text-gray-500 dark:text-gray-400 ${className}`}>
+    <div className={`flex items-center gap-2 text-themeBlack/60 dark:text-themeWhite/60 ${className}`}>
       <Loader2 className={`${sizes[size]} animate-spin`} />
       {label ? <span className="text-sm">{label}</span> : null}
     </div>

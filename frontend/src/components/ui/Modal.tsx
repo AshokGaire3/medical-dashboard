@@ -55,22 +55,22 @@ export function Modal({
         onClick={closeOnBackdrop ? onClose : undefined}
       />
       <div
-        className={`relative w-full ${sizeClass[size]} bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-800 flex flex-col max-h-[90vh]`}
+        className={`relative w-full ${sizeClass[size]} bg-themeWhite dark:bg-themeBlack shadow-xl border-2 border-themeBlack dark:border-themeWhite flex flex-col max-h-[90vh]`}
       >
         {(title || description) && (
-          <header className="flex items-start justify-between gap-4 px-6 py-4 border-b border-gray-200 dark:border-gray-800">
+          <header className="flex items-start justify-between gap-4 px-6 py-4 border-b border-themeBlack dark:border-themeWhite">
             <div>
               {title ? (
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
+                <h2 className="text-lg font-semibold text-themeBlack dark:text-themeWhite">{title}</h2>
               ) : null}
               {description ? (
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{description}</p>
+                <p className="text-sm text-themeBlack/60 dark:text-themeWhite/60 mt-0.5">{description}</p>
               ) : null}
             </div>
             <button
               onClick={onClose}
               aria-label="Close"
-              className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400"
+              className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 text-themeBlack/60 dark:text-themeWhite/60"
             >
               <X className="w-5 h-5" />
             </button>
@@ -78,7 +78,7 @@ export function Modal({
         )}
         <div className="px-6 py-4 overflow-y-auto">{children}</div>
         {footer ? (
-          <footer className="px-6 py-3 border-t border-gray-200 dark:border-gray-800 flex justify-end gap-2">
+          <footer className="px-6 py-3 border-t border-themeBlack dark:border-themeWhite flex justify-end gap-2">
             {footer}
           </footer>
         ) : null}
