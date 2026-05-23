@@ -6,7 +6,7 @@ namespace MedicalDashboard.Api.Validation;
 public class PatientDtoValidator : AbstractValidator<PatientDto>
 {
     private static readonly string[] AllowedGenders = { "Male", "Female", "Other", "Unknown" };
-    private static readonly string[] AllowedStatuses = { "Stable", "Monitoring", "Critical", "Recovery" };
+    private static readonly string[] AllowedStatuses = { "Stable", "Monitoring", "Critical", "Recovery", "Improving", "Recovered", "Discharged" };
 
     public PatientDtoValidator()
     {
